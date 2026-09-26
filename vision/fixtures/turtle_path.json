@@ -1,0 +1,17 @@
+{
+  "segment_id": "segment-turtle-001",
+  "chamber_id": "chamber-turtle",
+  "creature_id": "turtle-dot",
+  "creature_type": "TURTLE",
+  "capture_start_ms": 1000,
+  "capture_end_ms": 12000,
+  "source_payload": "controlled turtle fixture 001",
+  "detections": [
+    {"timestamp_ms": 1000, "x": 0.45, "y": 0.70, "confidence": 0.96},
+    {"timestamp_ms": 2500, "x": 0.46, "y": 0.70, "confidence": 0.96},
+    {"timestamp_ms": 4000, "x": 0.46, "y": 0.69, "confidence": 0.95},
+    {"timestamp_ms": 6500, "x": 0.72, "y": 0.68, "confidence": 0.95},
+    {"timestamp_ms": 8000, "x": 0.74, "y": 0.68, "confidence": 0.96},
+    {"timestamp_ms": 9500, "x": 0.75, "y": 0.67, "confidence": 0.96}
+  ]
+}

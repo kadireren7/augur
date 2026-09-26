@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "augur-core"
+version = "0.1.0"
+description = "Deterministic Augur vision, provenance, and oracle prototype"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.setuptools]
+packages = ["vision", "oracle"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+

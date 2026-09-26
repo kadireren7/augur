@@ -1,0 +1,17 @@
+{
+  "segment_id": "segment-hamster-001",
+  "chamber_id": "chamber-hamster",
+  "creature_id": "hamster-ada",
+  "creature_type": "HAMSTER",
+  "capture_start_ms": 1000,
+  "capture_end_ms": 7000,
+  "source_payload": "controlled hamster fixture 001",
+  "detections": [
+    {"timestamp_ms": 1000, "x": 0.12, "y": 0.50, "confidence": 0.98},
+    {"timestamp_ms": 1500, "x": 0.14, "y": 0.50, "confidence": 0.97},
+    {"timestamp_ms": 3000, "x": 0.48, "y": 0.51, "confidence": 0.96},
+    {"timestamp_ms": 3500, "x": 0.50, "y": 0.51, "confidence": 0.96},
+    {"timestamp_ms": 5000, "x": 0.84, "y": 0.49, "confidence": 0.97},
+    {"timestamp_ms": 5500, "x": 0.86, "y": 0.49, "confidence": 0.98}
+  ]
+}

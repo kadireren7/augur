@@ -1,0 +1,17 @@
+{
+  "segment_id": "segment-fish-001",
+  "chamber_id": "chamber-fish",
+  "creature_id": "fish-byte",
+  "creature_type": "FISH",
+  "capture_start_ms": 1000,
+  "capture_end_ms": 6000,
+  "source_payload": "controlled fish fixture 001",
+  "detections": [
+    {"timestamp_ms": 1000, "x": 0.82, "y": 0.30, "confidence": 0.95},
+    {"timestamp_ms": 1400, "x": 0.78, "y": 0.32, "confidence": 0.94},
+    {"timestamp_ms": 2600, "x": 0.55, "y": 0.35, "confidence": 0.93},
+    {"timestamp_ms": 3000, "x": 0.52, "y": 0.36, "confidence": 0.94},
+    {"timestamp_ms": 4200, "x": 0.24, "y": 0.40, "confidence": 0.92},
+    {"timestamp_ms": 4600, "x": 0.20, "y": 0.42, "confidence": 0.93}
+  ]
+}
