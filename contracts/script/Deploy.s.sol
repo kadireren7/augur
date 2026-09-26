@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import { CreatureRegistry } from "../src/CreatureRegistry.sol";
+import { BattleCoordinator } from "../src/BattleCoordinator.sol";
 import { DemoToken } from "../src/DemoToken.sol";
 import { NextOmenMarket } from "../src/NextOmenMarket.sol";
 import { OmenPublisher } from "../src/OmenPublisher.sol";
@@ -25,7 +26,8 @@ contract DeployAugur {
             RoomRegistry rooms,
             OmenPublisher omens,
             DemoToken token,
-            NextOmenMarket markets
+            NextOmenMarket markets,
+            BattleCoordinator battles
         )
     {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
@@ -36,6 +38,7 @@ contract DeployAugur {
         omens = new OmenPublisher(rooms, creatures);
         token = new DemoToken();
         markets = new NextOmenMarket(token, omens, deployer);
+        battles = new BattleCoordinator(deployer, deployer);
         vm.stopBroadcast();
     }
 }
