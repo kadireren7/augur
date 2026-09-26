@@ -61,7 +61,8 @@ class AttemptStore:
 
     def last_published_sequence(self, chamber_id: str) -> int:
         row = self.connection.execute(
-            "SELECT COALESCE(MAX(sequence), 0) FROM attempts WHERE chamber_id = ? AND status = 'PUBLISHED'",
+            """SELECT COALESCE(MAX(sequence), 0)
+                 FROM attempts WHERE chamber_id = ? AND status = 'PUBLISHED'""",
             (chamber_id,),
         ).fetchone()
         return int(row[0])

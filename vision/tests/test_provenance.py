@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import hashlib
+import tempfile
 import unittest
 from dataclasses import replace
+from pathlib import Path
 
 from vision.engine import VisionEngine, default_ruleset
 from vision.models import CreatureType, Detection, SourceSegment
-from vision.provenance import ProofOfOmen, SequenceVerifier, build_proof, verify_proof
+from vision.provenance import (
+    ProofOfOmen,
+    SequenceVerifier,
+    build_proof,
+    load_proof,
+    save_proof,
+    verify_proof,
+)
 
 
 class ProvenanceTests(unittest.TestCase):
@@ -97,6 +106,13 @@ class ProvenanceTests(unittest.TestCase):
             verifier.accept(proof)
         next_proof = replace(proof, omen_sequence=2, manifest_hash="").seal()
         verifier.accept(next_proof)
+
+    def test_local_json_round_trip(self) -> None:
+        proof = self.build()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "proof.json"
+            save_proof(path, proof)
+            self.assertEqual(load_proof(path), proof)
 
 
 if __name__ == "__main__":

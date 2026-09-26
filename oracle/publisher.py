@@ -85,7 +85,7 @@ class EvmPublisher:
                 "sequence": manifest.omen_sequence,
                 "omen_value": manifest.omen_value,
                 "behavior_type": manifest.behavior_type,
-                "observed_at_ms": manifest.observed_at_ms,
+                "observed_at": manifest.observed_at_ms // 1_000,
                 "ruleset_hash": manifest.omen_ruleset_hash,
                 "provenance_hash": manifest.manifest_hash,
             },

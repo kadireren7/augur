@@ -34,10 +34,28 @@ def default_ruleset(creature_type: CreatureType) -> Ruleset:
         right_boundary=2 / 3,
     )
     if creature_type is CreatureType.HAMSTER:
-        return Ruleset(**common, debounce_samples=2, cooldown_ms=1_000, inactivity_ms=1_500, movement_delta=0.08)
+        return Ruleset(
+            **common,
+            debounce_samples=2,
+            cooldown_ms=1_000,
+            inactivity_ms=1_500,
+            movement_delta=0.08,
+        )
     if creature_type is CreatureType.FISH:
-        return Ruleset(**common, debounce_samples=2, cooldown_ms=800, inactivity_ms=1_200, movement_delta=0.12)
-    return Ruleset(**common, debounce_samples=3, cooldown_ms=2_000, inactivity_ms=3_000, movement_delta=0.04)
+        return Ruleset(
+            **common,
+            debounce_samples=2,
+            cooldown_ms=800,
+            inactivity_ms=1_200,
+            movement_delta=0.12,
+        )
+    return Ruleset(
+        **common,
+        debounce_samples=3,
+        cooldown_ms=2_000,
+        inactivity_ms=3_000,
+        movement_delta=0.04,
+    )
 
 
 @dataclass
@@ -71,7 +89,10 @@ class VisionEngine:
         return Zone.RIGHT
 
     def process(self, source: SourceSegment, detections: list[Detection]) -> VisionResult:
-        if any(detections[i].timestamp_ms > detections[i + 1].timestamp_ms for i in range(len(detections) - 1)):
+        if any(
+            detections[i].timestamp_ms > detections[i + 1].timestamp_ms
+            for i in range(len(detections) - 1)
+        ):
             raise ValueError("detections must be ordered by timestamp")
 
         indexed: dict[int, list[tuple[int, Detection]]] = defaultdict(list)
@@ -89,7 +110,11 @@ class VisionEngine:
 
         for timestamp_ms in sorted(indexed):
             group = indexed[timestamp_ms]
-            eligible = [(i, d) for i, d in group if d.confidence >= self.ruleset.confidence_threshold]
+            eligible = [
+                (i, d)
+                for i, d in group
+                if d.confidence >= self.ruleset.confidence_threshold
+            ]
             if not eligible:
                 candidates.append(
                     BehaviorCandidate(
@@ -274,4 +299,3 @@ class VisionEngine:
             tuple(omen_candidates),
             tuple(omens),
         )
-

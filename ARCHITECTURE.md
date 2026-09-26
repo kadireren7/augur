@@ -2,7 +2,7 @@
 
 ## Status and principles
 
-Augur is at **M0**. This document describes a proposed architecture; none of the runtime modules or sponsor integrations are implemented yet.
+Augur has a tested local **M1–M4 core**. The vision/provenance and oracle modules run in Python, and the protocol/Next Omen market contracts run in Foundry. The E2E harness uses a local publication and market adapter rather than an EVM node. No contract is deployed to Monad, and no hosted sponsor integration is represented as active.
 
 The architecture follows four principles:
 
@@ -33,7 +33,7 @@ Approved camera / stream
           +------ authoritative events     +-- offchain chat / reactions
 ```
 
-The diagram shows intended responsibilities, not currently deployed services.
+The diagram shows the target deployed topology. Its local equivalents exist for vision, provenance, oracle validation, publication journaling, and market cycling; hosted storage, Monad submission, indexing, and the web app remain undeployed.
 
 ## End-to-end data flow
 
@@ -79,7 +79,7 @@ Onchain code must not pretend to verify pixels. It verifies authorization, timin
 
 ### `vision/`
 
-The planned vision service accepts an approved media segment and Chamber configuration. It should produce:
+The vision package currently accepts controlled JSON centroid trajectories and Chamber configuration. It produces:
 
 - normalized segment metadata and a source hash;
 - timestamped detections with labels, geometry or state, and confidence;
@@ -87,34 +87,35 @@ The planned vision service accepts an approved media segment and Chamber configu
 - model and preprocessing versions; and
 - diagnostics for rejected or ambiguous candidates.
 
-Inference must be deterministic where practical, or record enough version and environment information to explain variation. Creature-specific thresholds and cooldowns belong to versioned rules, not hidden UI logic. This module never publishes directly to contracts.
+The engine implements zone occupancy/entry/exit, directional movement, inactivity, confidence rejection, conflict rejection, debounce, cooldown, and monotonic Chamber sequences. Hamster, Fish, and Turtle fixtures have separate timing/movement parameters. A real video-to-centroid adapter remains planned. Creature-specific thresholds and cooldowns belong to versioned rules, not hidden UI logic. This module never publishes directly to contracts.
 
 ### `oracle/`
 
-The planned oracle service is the policy and provenance boundary between perception and contracts. It should:
+The oracle service is the policy and provenance boundary between perception and contracts. It currently:
 
-- validate Chamber, source, model, and ruleset authorization;
-- verify timestamps, continuity, confidence, cooldowns, and deduplication;
-- deterministically map behaviors to Omens;
-- build and hash the Proof of Omen manifest;
-- coordinate any required workflow attestations;
-- simulate contract calls before submission;
-- publish idempotently and monitor confirmation; and
-- pause on stale, conflicting, or incomplete inputs.
+- validates Chamber and creature authorization, freshness, and sequence monotonicity;
+- verifies source, detection, ruleset, and manifest hashes rather than remapping or generating Omens;
+- rejects stale, conflicting, malformed, or incomplete inputs;
+- uses an executable local workflow validator and an explicit, unconfigured Chainlink CRE boundary;
+- exposes a dependency-injected EVM transaction-intent publisher without holding signing keys;
+- publishes idempotently through a SQLite attempt journal; and
+- records failed attempts for safe retry.
 
 Oracle signing keys must be isolated from the vision process. A compromised inference worker must not be sufficient to publish an Omen.
 
 ### `contracts/`
 
-The proposed contracts are logically separated into:
+The implemented contracts are logically separated into:
 
 - **Creature Registry:** stable creature IDs, metadata commitments, species, and status.
 - **Room Registry:** Chamber IDs, creature binding, configuration commitment, oracle authorization, and lifecycle.
 - **Omen Publisher:** ordered Omen records, provenance commitments, replay protection, and publisher permissions.
 - **Market Factory / Market:** creation policy, outcome definitions, deadlines, prediction accounting, lock, resolve, cancel, refund, and claim.
-- **Battle Coordinator:** fixed competitors, scoring commitment, time window, and result or cancellation.
+- **Demo Token:** a permissionlessly mintable local/test token that must not be treated as a production asset.
+- **Next Omen Market:** operator-created BUY/HOLD/SELL markets with time locks, canonical Omen resolution, cancellation/refund, pari-mutuel claims, and consumed-sequence protection.
+- **Battle Coordinator (planned):** fixed competitors, scoring commitment, time window, and result or cancellation.
 
-The exact contract decomposition, upgrade policy, governance, payout design, and price-feed adapter remain design decisions for later milestones. Contract events should be sufficient to reconstruct user-visible state without reading private storage or an operator database.
+Next Omen uses a no-fee pari-mutuel payout. Upgrade policy, production governance, profitability/battle payouts, and a price-feed adapter remain later design decisions. Contract events are designed to reconstruct user-visible state without reading private storage or an operator database.
 
 ### `web/`
 
@@ -133,42 +134,45 @@ The UI may use indexed data for responsiveness but must not label a transaction 
 
 ## Sponsor integration roles
 
-All integrations in this section are planned and require prototype validation.
+No hosted sponsor integration is active. Current preparation and remaining work are explicit below.
 
 ### Envio
 
-Envio is the proposed indexing layer for registry, Omen, market, prediction, settlement, claim, and battle events. It should materialize Chamber timelines, open-market views, user histories, volume/activity summaries, and Chronicle standings. Envio is not the settlement authority; if an indexed view disagrees with finalized contract state, contract state wins.
+Envio remains **planned**. Registry, Omen, market, prediction, settlement, claim, refund, and lifecycle events are indexer-friendly. A later Envio project should materialize Chamber timelines, open-market views, user histories, activity summaries, and Chronicle standings. No indexer config or running indexer is included. Envio is not the settlement authority; if an indexed view disagrees with finalized contract state, contract state wins.
 
 ### Chainlink CRE
 
-Chainlink CRE is the proposed coordination layer for the oracle workflow: retrieving declared inputs, applying validation steps, binding outputs to a versioned workflow, and triggering onchain publication or market resolution. It may also coordinate external price-data inputs used by profitability and battle rules. CRE does not make a low-quality camera source truthful, so source integrity and evidence commitments remain explicit trust boundaries.
+Chainlink CRE remains **unconfigured**. `oracle/workflow.py` defines its validation boundary and fails explicitly when the CRE adapter is selected without a real client; local tests use the deterministic fallback. A later real workflow may retrieve declared inputs, bind validation to a workflow version, and trigger publication or resolution. CRE does not make a low-quality camera source truthful, so source integrity and evidence commitments remain explicit trust boundaries.
 
 ### Alchemy
 
-Alchemy is the proposed Monad RPC and transaction-observability provider for contract deployment, oracle submissions, web reads, transaction tracking, and operational monitoring. The design should support retry and provider fallback so one RPC response is not treated as an independent oracle truth.
+Alchemy remains **unconfigured**. Deployment and oracle RPC values come from environment variables, and the Python EVM publisher accepts a caller-supplied provider/signer function. This boundary can use an Alchemy Monad endpoint later without changing domain validation. Local tests make no RPC calls.
 
 ### Privy
 
-Privy is the proposed authentication and wallet-onboarding layer for the consumer app. It should reduce first-use friction while preserving explicit transaction consent and clear wallet ownership. Privy identity is not oracle authority, and chat identity must remain separate from market resolution permissions.
+Privy remains **planned for M5**; no SDK or UI wiring is present. Its boundary is the future web wallet/auth layer and must preserve explicit transaction consent and clear wallet ownership. Privy identity is not oracle authority, and chat identity must remain separate from market resolution permissions.
 
 ## High-level event schemas
 
-Exact ABI types and field packing will be decided with contract implementation. Events should include a schema version and indexed identifiers where useful.
+The deployed contract address/release identifies the current schema version; indexed identifiers are used for common query paths. The implemented high-level payloads are:
 
 ```text
 CreatureRegistered
-  creatureId, species, metadataHash, status, version
+  creatureId, species, metadataHash, owner, operator
 
-ChamberConfigured
-  chamberId, creatureId, configHash, rulesetHash, publisher, status, version
+ChamberRegistered
+  chamberId, creatureId, configHash, rulesetHash, publisher
+
+ChamberStatusChanged / ChamberConfigurationChanged
+  chamberId, previousStatus/newStatus or configHash/rulesetHash/publisher
 
 OmenPublished
   chamberId, creatureId, sequence, omenType, behaviorType,
   observedAt, rulesetHash, provenanceHash, publisher
 
 MarketOpened
-  marketId, chamberId, marketType, outcomesHash, opensAt, locksAt,
-  resolutionDeadline, configHash
+  marketId, chamberId, marketType, opensAt, locksAt,
+  resolutionDeadline, minOmenSequence, maxOmenSequence
 
 PredictionPlaced
   marketId, participant, outcome, amountOrShares
@@ -182,13 +186,13 @@ MarketResolved
 MarketCancelled
   marketId, reasonCode, cancelledAt
 
-Claimed
+Claimed / Refunded
   marketId, participant, amount
 
-BattleOpened
+BattleOpened (planned)
   battleId, creatureA, creatureB, startsAt, endsAt, scoringHash
 
-BattleResolved
+BattleResolved (planned)
   battleId, result, pnlA, pnlB, resolutionRef
 ```
 

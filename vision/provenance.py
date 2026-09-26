@@ -6,6 +6,7 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass, replace
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from .engine import VisionEngine
@@ -199,7 +200,10 @@ def verify_proof(
     source_bytes: bytes | None = None,
 ) -> None:
     manifest.validate()
-    if source_bytes is not None and hashlib.sha256(source_bytes).hexdigest() != manifest.source_hash:
+    if (
+        source_bytes is not None
+        and hashlib.sha256(source_bytes).hexdigest() != manifest.source_hash
+    ):
         raise ValueError("source hash mismatch")
     if detection_hash(detections) != manifest.detection_output_hash:
         raise ValueError("detection hash mismatch")
@@ -214,6 +218,21 @@ def verify_proof(
         manifest.omen_ruleset_version,
     } or manifest.behavior_ruleset_version != manifest.omen_ruleset_version:
         raise ValueError("ruleset version mismatch")
+
+
+def save_proof(path: str | Path, manifest: ProofOfOmen) -> None:
+    manifest.validate()
+    Path(path).write_bytes(canonical_json(manifest) + b"\n")
+
+
+def load_proof(path: str | Path) -> ProofOfOmen:
+    try:
+        value = json.loads(Path(path).read_bytes())
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(f"unable to load Proof of Omen: {exc}") from exc
+    if not isinstance(value, dict):
+        raise ValueError("Proof of Omen JSON must be an object")
+    return ProofOfOmen.from_dict(value)
 
 
 class SequenceVerifier:

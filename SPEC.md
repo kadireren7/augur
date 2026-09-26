@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the intended system. Augur is currently at **M0**: specification and architecture only. Unless a statement explicitly describes M0 documentation, all product and protocol behavior below is planned.
+This document defines intended product behavior and protocol rules. The repository now contains a tested local **M1–M4 core**: controlled-fixture vision, Proof of Omen generation and validation, protocol contracts, a test-token Next Omen market, and a local oracle/E2E harness. Live media ingestion, the consumer app, the other two market implementations, sponsor services, and Monad deployment remain planned.
 
 ## Goals
 
@@ -93,17 +93,17 @@ Predict `YES` or `NO` for whether the next ruleset-defined creature trade produc
 
 Predict which of two creatures will finish a fixed battle window with higher ruleset-defined PnL. Both competitors must use the same asset universe, starting notional, fee assumptions, price source, and battle duration. A tie or invalid data period follows the configured tie/refund rule.
 
-The exact market-making and payout mechanism is intentionally undecided at M0 and must be specified and tested before M2 implementation.
+The implemented Next Omen prototype uses a no-fee pari-mutuel pool: winning stake splits the full pool proportionally, with the final winning claim receiving any integer remainder. If the resolved outcome has no stake, the market cancels and all participants can refund. Payout mechanisms for profitability and battle markets remain undecided.
 
 ## Creature rules
 
-Initial behavior vocabularies are deliberately small and must be validated against real footage without encouraging animal interaction.
+Initial behavior vocabularies are deliberately small. The current engine exercises them with controlled centroid fixtures; they still require validation against real footage without encouraging animal interaction.
 
 - **Hamster:** candidate behaviors include entering a labeled zone, sustained wheel activity, leaving a zone, and inactivity. Camera framing must allow reliable zone and motion detection.
 - **Fish:** candidate behaviors include entering a labeled tank region, crossing a virtual boundary, directional movement, and inactivity. Rules must tolerate reflections, occlusion, schooling, and water movement.
 - **Turtle:** candidate behaviors include entering a labeled region, directional movement, feeding-area presence, and sustained inactivity. Longer timing thresholds should reflect slower movement.
 
-These are candidate detection classes, not implemented capabilities. Each accepted behavior requires per-creature thresholds, minimum confidence, debounce duration, cooldown, and an unambiguous Omen mapping in a versioned ruleset. Rules must never require deprivation, startling, forced movement, fighting, or other harmful manipulation.
+Zone occupancy/entry/exit, directional movement, and inactivity are implemented for deterministic fixtures with per-creature thresholds, minimum confidence, debounce duration, cooldown, and an unambiguous Omen mapping in a versioned ruleset. General video detection is not implemented. Rules must never require deprivation, startling, forced movement, fighting, or other harmful manipulation.
 
 ## Battle mechanics
 
@@ -153,9 +153,9 @@ Permissionless Chamber creation is a **later milestone**, not part of the MVP. I
 
 ## MVP boundaries
 
-The first runnable MVP is limited to allowlisted Chambers, three creature types, a small fixed behavior vocabulary, one oracle path, test assets, and the three defined market families. It targets a test environment and demonstration flow, not production wagering. Raw media, inference, chat, reactions, and large provenance artifacts remain offchain. Permissionless rooms, decentralized dispute resolution, arbitrary market creation, production governance, mobile applications, and guaranteed evidence availability are outside the MVP.
+The runnable M1–M4 core is limited to allowlisted Chambers, three creature fixture types, a small fixed behavior vocabulary, a local oracle path, demo assets, and the Next Omen market. Extensible market type definitions reserve Next Trade Profitable and Creature Battle Winner, but neither lifecycle is implemented. It targets local tests and a demonstration flow, not production wagering. Raw media, inference, chat, reactions, and large provenance artifacts remain offchain. Permissionless rooms, decentralized dispute resolution, arbitrary market creation, production governance, mobile applications, and guaranteed evidence availability are outside the MVP.
 
-## M0 success criteria
+## M0 success criteria (completed)
 
 M0 is complete when:
 
