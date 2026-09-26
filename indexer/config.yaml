@@ -1,0 +1,50 @@
+# Local code-generation configuration. Replace addresses and chain settings after deployment.
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: augur-local-indexer
+description: Augur protocol, market, and battle event projections
+contracts:
+  - name: CreatureRegistry
+    events:
+      - event: "CreatureRegistered(bytes32 indexed creatureId, uint8 species, bytes32 indexed metadataHash, address indexed owner, address operator)"
+      - event: "CreatureStatusChanged(bytes32 indexed creatureId, bool active)"
+  - name: RoomRegistry
+    events:
+      - event: "ChamberRegistered(bytes32 indexed chamberId, bytes32 indexed creatureId, bytes32 configHash, bytes32 rulesetHash, address indexed publisher)"
+      - event: "ChamberStatusChanged(bytes32 indexed chamberId, uint8 previousStatus, uint8 newStatus)"
+      - event: "ChamberConfigurationChanged(bytes32 indexed chamberId, bytes32 configHash, bytes32 rulesetHash, address indexed publisher)"
+  - name: OmenPublisher
+    events:
+      - event: "OmenPublished(bytes32 indexed chamberId, bytes32 indexed creatureId, uint64 indexed sequence, uint8 omenType, uint8 behaviorType, uint64 observedAt, bytes32 rulesetHash, bytes32 provenanceHash, address publisher)"
+  - name: NextOmenMarket
+    events:
+      - event: "MarketOpened(uint256 indexed marketId, bytes32 indexed chamberId, uint8 marketType, uint64 opensAt, uint64 locksAt, uint64 resolutionDeadline, uint64 minOmenSequence, uint64 maxOmenSequence)"
+      - event: "PredictionPlaced(uint256 indexed marketId, address indexed participant, uint8 outcome, uint256 amount)"
+      - event: "MarketLocked(uint256 indexed marketId, uint64 lockedAt)"
+      - event: "MarketResolved(uint256 indexed marketId, uint8 outcome, uint64 indexed omenSequence, bytes32 provenanceHash, uint64 resolvedAt)"
+      - event: "MarketCancelled(uint256 indexed marketId, bytes32 indexed reasonCode, uint64 cancelledAt)"
+      - event: "Claimed(uint256 indexed marketId, address indexed participant, uint256 amount)"
+      - event: "Refunded(uint256 indexed marketId, address indexed participant, uint256 amount)"
+  - name: BattleCoordinator
+    events:
+      - event: "BattleOpened(bytes32 indexed battleId, bytes32 indexed creatureA, bytes32 indexed creatureB, bytes32 chamberA, bytes32 chamberB, bytes32 asset, uint64 startsAt, uint64 endsAt, uint256 startingNotional, bytes32 scoringConfigHash)"
+      - event: "BattleActivated(bytes32 indexed battleId, uint64 activatedAt)"
+      - event: "BattleEnded(bytes32 indexed battleId, uint64 endedAt)"
+      - event: "BattleResolved(bytes32 indexed battleId, uint8 result, int256 pnlA, int256 pnlB, bytes32 priceSeriesHash, bytes32 resolutionHash)"
+      - event: "BattleCancelled(bytes32 indexed battleId, bytes32 indexed reason, uint64 cancelledAt)"
+chains:
+  - id: 31337
+    start_block: 0
+    rpc:
+      - url: http://host.docker.internal:8545
+        for: sync
+    contracts:
+      - name: CreatureRegistry
+        address: "0x0000000000000000000000000000000000000001"
+      - name: RoomRegistry
+        address: "0x0000000000000000000000000000000000000002"
+      - name: OmenPublisher
+        address: "0x0000000000000000000000000000000000000003"
+      - name: NextOmenMarket
+        address: "0x0000000000000000000000000000000000000004"
+      - name: BattleCoordinator
+        address: "0x0000000000000000000000000000000000000005"

@@ -1,0 +1,90 @@
+type Creature {
+  id: ID!
+  species: Int!
+  metadataHash: String!
+  owner: String!
+  operator: String!
+  active: Boolean!
+  registeredAt: BigInt!
+}
+
+type Chamber {
+  id: ID!
+  creatureId: String! @index
+  configHash: String!
+  rulesetHash: String!
+  publisher: String!
+  status: Int!
+  latestSequence: BigInt!
+  omenCount: BigInt!
+  volume: BigInt!
+}
+
+type Omen {
+  id: ID!
+  chamberId: String! @index
+  creatureId: String! @index
+  sequence: BigInt!
+  omenType: Int!
+  behaviorType: Int!
+  observedAt: BigInt!
+  rulesetHash: String!
+  provenanceHash: String!
+  publisher: String!
+  blockNumber: BigInt!
+}
+
+type Market {
+  id: ID!
+  chamberId: String! @index
+  marketType: Int!
+  state: Int!
+  opensAt: BigInt!
+  locksAt: BigInt!
+  resolutionDeadline: BigInt!
+  minOmenSequence: BigInt!
+  maxOmenSequence: BigInt!
+  winningOutcome: Int
+  resolvingSequence: BigInt
+  provenanceHash: String
+  cancellationReason: String
+  volume: BigInt!
+}
+
+type Prediction {
+  id: ID!
+  marketId: String! @index
+  participant: String! @index
+  outcome: Int!
+  amount: BigInt!
+  blockNumber: BigInt!
+}
+
+type UserMarketAction {
+  id: ID!
+  marketId: String! @index
+  participant: String! @index
+  kind: String!
+  amount: BigInt!
+  blockNumber: BigInt!
+}
+
+type Battle {
+  id: ID!
+  creatureA: String! @index
+  creatureB: String! @index
+  chamberA: String!
+  chamberB: String!
+  asset: String!
+  startsAt: BigInt!
+  endsAt: BigInt!
+  startingNotional: BigInt!
+  scoringConfigHash: String!
+  state: Int!
+  result: Int
+  pnlA: BigInt
+  pnlB: BigInt
+  priceSeriesHash: String
+  resolutionHash: String
+  cancellationReason: String
+}

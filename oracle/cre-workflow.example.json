@@ -1,0 +1,18 @@
+{
+  "workflow_id": "augur-omen-validation-v1",
+  "input": {
+    "manifest_hash": "sha256 manifest commitment",
+    "chamber_id": "registered Chamber identifier",
+    "creature_id": "registered Creature identifier",
+    "sequence": "strictly increasing Omen sequence",
+    "provenance_hash": "same manifest commitment used onchain",
+    "publication_state": "manifest publication state"
+  },
+  "required_response": {
+    "workflow_id": "must match requested workflow",
+    "manifest_hash": "must match request",
+    "chamber_id": "must match request",
+    "sequence": "must match request",
+    "accepted": true
+  }
+}
