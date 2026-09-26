@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines intended product behavior and protocol rules. The repository now contains a tested local **M1–M4 core**: controlled-fixture vision, Proof of Omen generation and validation, protocol contracts, a test-token Next Omen market, and a local oracle/E2E harness. Live media ingestion, the consumer app, the other two market implementations, sponsor services, and Monad deployment remain planned.
+This document defines intended product behavior and protocol rules. The repository now contains a tested local **M1–M6 product**: controlled-fixture vision, Proof of Omen generation and validation, protocol contracts, a test-token Next Omen market, a local oracle/E2E harness, functional Live Chambers, deterministic battles, and Chronicle views. Live media ingestion, the other two market implementations, configured sponsor services, and Monad deployment remain planned.
 
 ## Goals
 
@@ -116,11 +116,13 @@ Zone occupancy/entry/exit, directional movement, and inactivity are implemented 
 - Stale price data, interrupted provenance, a paused Chamber, or excessive unavailable time triggers a predefined cancel or refund path.
 - Exact ties use the market's declared tie outcome or refund rule; this cannot be selected after lock.
 
+The implemented battle engine uses a timestamped deterministic price replay, converts BUY/HOLD/SELL Omens into virtual long/flat/short positions, keeps a side flat when it emits no Omen, and cancels for stale prices, conflicting Omens, or configuration mismatch. `BattleCoordinator` commits the fixed configuration and final PnL/result onchain; the authorized result publisher remains an explicit trust boundary.
+
 Chronicle rankings should distinguish prediction performance from creature battle performance and must be reproducible from indexed events and the pinned scoring rules.
 
 ## Chat and reactions
 
-Chat and crowd reactions are offchain, latency-sensitive social features. They may use authenticated user identifiers, moderation, rate limits, and ephemeral aggregation. They cannot resolve markets, alter Omen ordering, or serve as oracle evidence. Only aggregate reaction counts that add product value should be retained, subject to a documented privacy and retention policy.
+Chat and crowd reactions are offchain, latency-sensitive social features. The local product uses session-scoped display names, schema validation, message escaping, basic moderation hooks, bounded retention, and rate limits. They cannot resolve markets, alter Omen ordering, or serve as oracle evidence. Only aggregate reaction counts that add product value should be retained, subject to a documented privacy and retention policy.
 
 ## Permissionless room creation
 
@@ -153,7 +155,7 @@ Permissionless Chamber creation is a **later milestone**, not part of the MVP. I
 
 ## MVP boundaries
 
-The runnable M1–M4 core is limited to allowlisted Chambers, three creature fixture types, a small fixed behavior vocabulary, a local oracle path, demo assets, and the Next Omen market. Extensible market type definitions reserve Next Trade Profitable and Creature Battle Winner, but neither lifecycle is implemented. It targets local tests and a demonstration flow, not production wagering. Raw media, inference, chat, reactions, and large provenance artifacts remain offchain. Permissionless rooms, decentralized dispute resolution, arbitrary market creation, production governance, mobile applications, and guaranteed evidence availability are outside the MVP.
+The runnable M1–M6 product is limited to allowlisted Chambers, three creature fixture types, a small fixed behavior vocabulary, a local oracle path, demo assets, the Next Omen market, in-memory social state, and deterministic replay battles. Extensible market type definitions reserve Next Trade Profitable and Creature Battle Winner, but neither lifecycle is implemented. It targets local tests and a demonstration flow, not production wagering. Raw media, inference, chat, reactions, price fixtures, and large provenance artifacts remain offchain. Permissionless rooms, decentralized dispute resolution, arbitrary market creation, production governance, mobile applications, and guaranteed evidence availability are outside the MVP.
 
 ## M0 success criteria (completed)
 

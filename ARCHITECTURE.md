@@ -2,7 +2,7 @@
 
 ## Status and principles
 
-Augur has a tested local **M1–M4 core**. The vision/provenance and oracle modules run in Python, and the protocol/Next Omen market contracts run in Foundry. The E2E harness uses a local publication and market adapter rather than an EVM node. No contract is deployed to Monad, and no hosted sponsor integration is represented as active.
+Augur has a tested local **M1–M6 product**. Vision, provenance, oracle, and battle replay run in Python; protocol, Next Omen market, and battle commitment contracts run in Foundry; and the functional product layer runs in Next.js. The E2E harness and unconfigured web mode use explicit local adapters rather than an EVM node. No contract is deployed to Monad, and no hosted sponsor integration is represented as active.
 
 The architecture follows four principles:
 
@@ -33,7 +33,7 @@ Approved camera / stream
           +------ authoritative events     +-- offchain chat / reactions
 ```
 
-The diagram shows the target deployed topology. Its local equivalents exist for vision, provenance, oracle validation, publication journaling, and market cycling; hosted storage, Monad submission, indexing, and the web app remain undeployed.
+The diagram shows the target deployed topology. Local equivalents exist for vision, provenance, oracle validation, publication journaling, market cycling, social interaction, battle replay, Chronicle projection, and the web product. Hosted storage, Monad submission, and hosted indexing remain undeployed.
 
 ## End-to-end data flow
 
@@ -113,44 +113,48 @@ The implemented contracts are logically separated into:
 - **Market Factory / Market:** creation policy, outcome definitions, deadlines, prediction accounting, lock, resolve, cancel, refund, and claim.
 - **Demo Token:** a permissionlessly mintable local/test token that must not be treated as a production asset.
 - **Next Omen Market:** operator-created BUY/HOLD/SELL markets with time locks, canonical Omen resolution, cancellation/refund, pari-mutuel claims, and consumed-sequence protection.
-- **Battle Coordinator (planned):** fixed competitors, scoring commitment, time window, and result or cancellation.
+- **Battle Coordinator:** fixed competitors, scoring commitment, time window, authorized result publisher, deterministic result consistency, and result or cancellation events.
 
-Next Omen uses a no-fee pari-mutuel payout. Upgrade policy, production governance, profitability/battle payouts, and a price-feed adapter remain later design decisions. Contract events are designed to reconstruct user-visible state without reading private storage or an operator database.
+Next Omen uses a no-fee pari-mutuel payout. Battle scoring remains offchain because it consumes a declared price replay and two ordered Omen streams; `BattleCoordinator` commits its configuration and validates that the submitted winner matches the PnL comparison. The authorized result publisher is trusted to reproduce the declared scoring inputs. Upgrade policy, production governance, profitability/battle payouts, and a live price-feed adapter remain later design decisions. Contract events are designed to reconstruct user-visible state without reading private storage or an operator database.
 
 ### `web/`
 
-The planned web application contains:
+The implemented functional web application contains:
 
 - Chamber discovery and live Chamber views;
-- clear live, delayed, replay, paused, and stale indicators;
+- explicit fixture/replay/live source modes; seeded Chambers are labeled `FIXTURE · NOT LIVE`;
 - Omen and provenance timelines;
 - market state, prediction submission, settlement, refund, and claim flows;
 - The Pit battle view and Chronicle histories/standings;
 - wallet onboarding and transaction status;
 - offchain chat, reactions, moderation, and presence; and
-- operator diagnostics separated from public views.
+- a health view for data mode, RPC/chain state, contract configuration, sponsor configuration, and local sequences.
 
-The UI may use indexed data for responsiveness but must not label a transaction or result final until the selected confirmation policy is met.
+Local mode uses in-memory deterministic state, never creates a fake transaction hash, and resets on server restart. Contract mode uses typed viem calldata, checks wallet chain ID, and waits for a receipt when a public RPC is configured. Privy is loaded only when an app ID exists; otherwise the UI says that the local session is unauthenticated. Chat and reactions have no import path to oracle or market resolution code.
+
+### `indexer/`
+
+The Envio HyperIndex project defines entities and typed handlers for creatures, Chambers, Omens, markets, predictions, claim/refund actions, and battles. Its committed configuration targets local chain `31337` with conspicuous code-generation placeholder addresses. `envio codegen` and TypeScript checks run locally; replacing the chain, start block, RPC, and addresses after deployment is mandatory before indexing real events.
 
 ## Sponsor integration roles
 
-No hosted sponsor integration is active. Current preparation and remaining work are explicit below.
+No hosted sponsor integration is active. Current implementation and remaining configuration are explicit below.
 
 ### Envio
 
-Envio remains **planned**. Registry, Omen, market, prediction, settlement, claim, refund, and lifecycle events are indexer-friendly. A later Envio project should materialize Chamber timelines, open-market views, user histories, activity summaries, and Chronicle standings. No indexer config or running indexer is included. Envio is not the settlement authority; if an indexed view disagrees with finalized contract state, contract state wins.
+Envio is **implemented locally but not running against a deployment**. `indexer/` contains a real schema, configuration, and typed handlers for Registry, Omen, market, prediction, settlement, claim/refund, and battle events. Code generation and type-checking pass. A deployed address set, Envio API token, Docker-backed local service or hosted deployment, and the final application query projection remain outstanding. Envio is not the settlement authority; if an indexed view disagrees with finalized contract state, contract state wins.
 
 ### Chainlink CRE
 
-Chainlink CRE remains **unconfigured**. `oracle/workflow.py` defines its validation boundary and fails explicitly when the CRE adapter is selected without a real client; local tests use the deterministic fallback. A later real workflow may retrieve declared inputs, bind validation to a workflow version, and trigger publication or resolution. CRE does not make a low-quality camera source truthful, so source integrity and evidence commitments remain explicit trust boundaries.
+Chainlink CRE remains **unconfigured for real execution**. `oracle/workflow.py` constructs a bounded validation request and requires the response to match the workflow ID, manifest hash, Chamber, and sequence before accepting it. The adapter fails explicitly without an injected real client; local tests use the deterministic fallback and a stub transport only to test binding. Credentials, a deployed workflow, and an SDK/runtime transport remain outstanding. CRE does not make a low-quality camera source truthful, so source integrity and evidence commitments remain explicit trust boundaries.
 
 ### Alchemy
 
-Alchemy remains **unconfigured**. Deployment and oracle RPC values come from environment variables, and the Python EVM publisher accepts a caller-supplied provider/signer function. This boundary can use an Alchemy Monad endpoint later without changing domain validation. Local tests make no RPC calls.
+Alchemy remains **unconfigured**. Deployment, oracle, server health, and browser transaction RPC values come from separate environment variables. The web health check reports reachability and chain mismatches without returning the endpoint, while viem uses the configured browser RPC for confirmation. An Alchemy Monad endpoint can be supplied without changing domain validation. Local tests make no external RPC calls.
 
 ### Privy
 
-Privy remains **planned for M5**; no SDK or UI wiring is present. Its boundary is the future web wallet/auth layer and must preserve explicit transaction consent and clear wallet ownership. Privy identity is not oracle authority, and chat identity must remain separate from market resolution permissions.
+Privy's **real React SDK path is wired but unconfigured**. Supplying `NEXT_PUBLIC_PRIVY_APP_ID` enables login, embedded-wallet onboarding for users without a wallet, address display, and EIP-1193 transaction signing. Without it, the application uses a clearly labeled unauthenticated local dev session. No credentialed Privy login was exercised. Privy identity is not oracle authority, and chat identity remains separate from market resolution permissions.
 
 ## High-level event schemas
 
@@ -189,11 +193,15 @@ MarketCancelled
 Claimed / Refunded
   marketId, participant, amount
 
-BattleOpened (planned)
-  battleId, creatureA, creatureB, startsAt, endsAt, scoringHash
+BattleOpened
+  battleId, creatureA, creatureB, chamberA, chamberB, asset,
+  startsAt, endsAt, startingNotional, scoringConfigHash
 
-BattleResolved (planned)
-  battleId, result, pnlA, pnlB, resolutionRef
+BattleActivated / BattleEnded / BattleCancelled
+  battleId, transition timestamp or cancellation reason
+
+BattleResolved
+  battleId, result, pnlA, pnlB, priceSeriesHash, resolutionHash
 ```
 
 Sensitive data, long strings, and large arrays should not appear in events. Stable reason codes and hashes are preferable to mutable prose.

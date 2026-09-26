@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from fractions import Fraction
+from typing import Callable, Protocol
 
 from vision.provenance import stable_hash
 
@@ -83,6 +84,39 @@ class PriceSeries:
     source_id: str
     asset: str
     points: tuple[PricePoint, ...]
+
+
+class PriceProvider(Protocol):
+    def load(self, config: BattleConfig) -> PriceSeries: ...
+
+
+@dataclass(frozen=True)
+class ReplayPriceProvider:
+    """Deterministic fixture/replay source; its source identifier remains visible."""
+
+    series: PriceSeries
+
+    def load(self, config: BattleConfig) -> PriceSeries:
+        if self.series.asset != config.asset:
+            raise ValueError("price replay asset mismatch")
+        return self.series
+
+
+class ConfiguredPriceProvider:
+    """Boundary for a real timestamped provider with no fixture fallback."""
+
+    def __init__(
+        self,
+        source_id: str,
+        loader: Callable[[BattleConfig], tuple[PricePoint, ...]],
+    ) -> None:
+        if not source_id or loader is None:
+            raise ValueError("configured price provider requires a source and loader")
+        self.source_id = source_id
+        self.loader = loader
+
+    def load(self, config: BattleConfig) -> PriceSeries:
+        return PriceSeries(self.source_id, config.asset, self.loader(config))
 
 
 @dataclass

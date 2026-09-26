@@ -2,7 +2,7 @@
 
 Augur is a hackathon project that turns observable animal behavior into verifiable onchain events and short, real-time prediction markets on Monad. A live creature room is a **Chamber**; a detected physical action becomes a **Behavior**; and a ruleset can map that behavior into an **Omen** such as BUY, HOLD, or SELL.
 
-Augur has a tested local **M1–M4 core**: deterministic fixture-based vision, Proof of Omen provenance, EVM-compatible protocol contracts, a test-token Next Omen market, an idempotent oracle bridge, and a repeated-cycle developer demo. Nothing is deployed to Monad, and the consumer application and hosted sponsor integrations are not implemented yet.
+Augur has a tested local **M1–M6 product**: deterministic fixture-based vision, Proof of Omen provenance, EVM-compatible protocol and market contracts, an idempotent oracle bridge, functional Live Chambers, offchain social features, deterministic creature battles, and Chronicle views. Nothing is deployed to Monad, and hosted sponsor services remain unconfigured.
 
 ## Problem and concept
 
@@ -30,40 +30,41 @@ Implemented and tested locally:
 - Test-token Next Omen markets with open, lock, resolve, cancel/refund, claim, replay protection, and pari-mutuel payouts.
 - SQLite-backed oracle publication attempts, idempotent retries, local publication, and an EVM transaction-intent boundary.
 - A local harness that resolves repeated markets and independent Chambers without external services.
+- A responsive Next.js application with Chamber discovery, fixture playback, provenance inspection, market actions, transaction feedback, chat, reactions, The Pit, Chronicle, and a health view.
+- A deterministic battle engine and compact onchain `BattleCoordinator` result commitment.
+- A real Privy SDK path with an explicit unauthenticated local fallback, typed viem contract writes, RPC health and wrong-chain checks, and environment-driven Alchemy-compatible RPC configuration.
+- An Envio HyperIndex project whose code generation and typed handlers cover registry, Chamber, Omen, market, claim/refund, and battle events.
 
-Planned for M5 and later:
+Planned for M7 and later, or still pending external configuration:
 
-- Live creature media, Chamber UI, Privy onboarding, and offchain chat/reactions.
-- **The Pit** creature battles and virtual PnL scoring.
-- **Chronicle** history and standings backed by Envio indexing.
+- Real live creature media and a production media/centroid adapter; the UI currently says `FIXTURE · NOT LIVE`.
+- Monad deployment, real contract addresses, a hosted Envio endpoint, Privy credentials, and execution through a configured Chainlink CRE transport.
 - Next-trade-profitable markets and battle-winner markets; only their extensible type definitions exist today.
 - Guarded permissionless Chamber creation and third-party event consumption.
 
 ## Architecture summary
 
-Augur is separated into four modules:
+Augur is separated into five modules:
 
 - `vision/` processes deterministic trajectory fixtures into observations, behaviors, Omens, and provenance manifests. A production video adapter remains planned.
-- `oracle/` validates manifests and policy, journals publication attempts, supports local publication, and exposes configuration boundaries for EVM and Chainlink CRE clients.
-- `contracts/` contains Foundry-tested registries, Omen publication, a demo token, and the Next Omen market lifecycle.
-- `web/` is reserved for the M5 consumer application and currently contains no implementation.
+- `oracle/` validates manifests and policy, journals publication attempts, supports local publication and deterministic battle replay, and exposes configured-client boundaries for EVM and Chainlink CRE.
+- `contracts/` contains Foundry-tested registries, Omen publication, a demo token, the Next Omen lifecycle, and battle result commitments.
+- `indexer/` contains the Envio schema, local code-generation configuration, and typed event projections.
+- `web/` contains the functional Next.js product layer and its local/contract/indexed data boundaries.
 
-Envio, Chainlink CRE, Alchemy, and Privy remain planned integrations. The repository currently provides indexer-friendly events, an explicit CRE adapter boundary with a local fallback, environment-driven RPC/deployment configuration, and a documented future wallet boundary. No hosted sponsor integration is claimed as complete.
+Privy's SDK path and typed transaction signing boundary are implemented, but no app ID has been configured. Alchemy-compatible RPC configuration needs only an endpoint; no RPC was supplied during verification. Envio code generation and handler type-checking work locally, but the committed addresses are local placeholders and no hosted indexer is running. The CRE request/response binding is implemented with a local validator fallback, but no real CRE client or workflow execution is claimed.
 
 ## Milestone status
 
-**Current: M4 core complete locally.** M1–M4 behavior is implemented and covered by deterministic Python and Foundry tests. The local demo does not submit an EVM transaction; Solidity behavior is proven separately in Foundry. Monad deployment, hosted workflow execution, indexing, and the polished consumer experience remain outstanding.
+**Current: M5 and M6 complete as a functional local product layer.** The Chamber and social flows run in the web application, while battles and Chronicle are reproducible from declared fixture and scoring inputs. Contract-mode writes, indexed reads, and Privy onboarding are wired but activate only when their real configuration exists. Monad deployment, hosted indexing, real CRE execution, and live media ingestion remain outstanding.
 
 ## Developer workflow
 
-Prerequisites are Python 3.11+ and Foundry with Solidity 0.8.28 available. The Python core has no runtime package dependency.
+Prerequisites are Python 3.11+, Foundry with Solidity 0.8.28, Node.js 22+, and pnpm. Docker and an Envio API token are needed only to run the local HyperIndex service.
 
 ```bash
-# Optional editable Python package install; no runtime dependencies are downloaded
-python3 -m pip install -e .
-
-# Fetch/compile the configured Solidity compiler if it is not already available
-cd contracts && forge build && cd ..
+# Install Python, web, and indexer dependencies
+make install
 
 # Run everything
 make test
@@ -72,13 +73,25 @@ make test
 make test-vision
 make test-oracle
 make test-contracts
+make test-web
+make test-indexer
 
 # Run the fixture-to-market local demo
 make demo
 
+# Run the functional web app at http://localhost:3000
+make dev-web
+
 # Compile Python and check Solidity formatting
 make lint
+
+# Produce the production web build
+make build-web
 ```
+
+With no environment variables, the web app uses clearly labeled in-memory fixture/local-demo state. Copy `web/.env.example` to `web/.env.local` to enable optional runtime boundaries. `NEXT_PUBLIC_PRIVY_APP_ID` enables the real Privy provider. RPC and contract variables enable typed wallet writes only for markets reported as contract-backed; local mode never emits a transaction hash. `ENVIO_GRAPHQL_URL` selects indexed reads and does not silently fall back on request failure.
+
+The Envio project is in `indexer/`. Its committed chain and addresses are local code-generation placeholders. After a deployment, replace them in `indexer/config.yaml`, put `ENVIO_API_TOKEN` in the ignored `indexer/.env`, and run `pnpm dev` from that directory. Docker is required for the local database and GraphQL service.
 
 For an environment-driven deployment, copy `.env.example`, provide a Monad-compatible RPC URL and deployer key, then run:
 
@@ -93,8 +106,12 @@ The deployment command has not been run against Monad. `DemoToken` has permissio
 
 - Vision consumes controlled JSON centroid trajectories; it does not yet extract centroids from arbitrary video.
 - The executable E2E uses the local publisher and local market model. The same lifecycle is contract-tested, but the Python harness is not yet wired to a local EVM node.
-- Chainlink CRE has an explicit adapter boundary only; Envio, Alchemy, and Privy are not connected.
+- Privy requires a real app ID; no authenticated session was exercised. Alchemy requires a Monad RPC endpoint; no external RPC health check was exercised.
+- Envio handlers are generated and type-checked, but no deployed addresses, API token, Docker-backed local service, or hosted endpoint was available.
+- The CRE adapter validates response binding, but no real CRE SDK transport or workflow execution was available.
 - Only Next Omen is implemented as a market. Profitability and battle markets remain planned.
+- Battle scoring runs deterministically offchain and commits final results through `BattleCoordinator`; its publisher remains a trust boundary. A battle-winner prediction market is not implemented.
+- Web local state, chat, and reactions are in memory and reset when the server restarts.
 - Contracts have not received an external security review and must not hold production funds.
 
 ## Development roadmap
@@ -104,8 +121,8 @@ The deployment command has not been run against Monad. `DemoToken` has permissio
 - **M2 — Proof of Omen (local core complete):** provenance linking source hash, detections, behavior, ruleset version, Omen, and verification artifacts.
 - **M3 — Monad Protocol (contracts complete; deployment pending):** Creature Registry, allowlisted Room Registry, Omen publication, authorization, sequencing, replay protection, and core events.
 - **M4 — Real-time Market Engine (local core complete):** test-token Next Omen markets, oracle validation, local repeated-cycle demo, and an unconfigured CRE boundary. Monad deployment remains pending.
-- **M5 — Live Chambers:** build the consumer experience: Chamber views, creature stream/video, current Omen, market interaction, Privy wallet onboarding, Alchemy infrastructure, and offchain live chat/reactions.
-- **M6 — Battles & Chronicle:** implement creature-vs-creature battles, deterministic virtual PnL scoring, standings/history, and Envio indexing/query views.
+- **M5 — Live Chambers (functional local product complete):** Chamber discovery/detail/provenance, fixture media, local and configured contract market actions, Privy/viem/RPC boundaries, chat, reactions, health diagnostics, and explicit mode/error states.
+- **M6 — Battles & Chronicle (functional local product complete):** deterministic virtual PnL replay, onchain result commitments, The Pit, event-derived standings/history, and a generated/type-checked Envio indexing project. Hosted indexing remains pending deployment.
 - **M7 — Permissionless Chambers:** prototype guarded user-created creature rooms with constrained rulesets, source verification, anti-spam controls, and registration flows.
 - **M8 — Monad Showcase / Speed Mode:** create the hackathon demo mode with rapid repeated market cycles, concurrent predictions, Omen publication, settlement, and visible transaction/event activity to demonstrate why Monad matters.
 

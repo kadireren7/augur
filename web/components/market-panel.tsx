@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useSession } from "@/components/providers";
 import { AugurContractClient } from "@/lib/contracts";
@@ -8,6 +8,11 @@ import type { MarketView, OmenValue, TransactionFeedback } from "@/lib/types";
 import type { EIP1193Provider } from "viem";
 
 const outcomes: OmenValue[] = ["BUY", "HOLD", "SELL"];
+
+function rejection(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  return message.includes("user rejected") || message.includes("user denied");
+}
 
 export function MarketPanel({ market, onChanged }: { market: MarketView | null; onChanged(): Promise<void> }) {
   const session = useSession();
@@ -19,6 +24,11 @@ export function MarketPanel({ market, onChanged }: { market: MarketView | null; 
     message: "",
     mode: market?.mode ?? "LOCAL_DEMO",
   });
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   if (!market) return <section className="panel"><h2>Next Omen market</h2><p className="empty">No active market.</p></section>;
   const position = market.positions[session.sessionId];
@@ -65,9 +75,18 @@ export function MarketPanel({ market, onChanged }: { market: MarketView | null; 
       if (contractMode) await contractAction(action);
       else await localAction(action);
     } catch (error) {
-      setFeedback({ phase: "FAILED", message: error instanceof Error ? error.message : "Action failed", mode: contractMode ? "CONTRACT" : "LOCAL_DEMO" });
+      setFeedback({
+        phase: rejection(error) ? "REJECTED" : "FAILED",
+        message: error instanceof Error ? error.message : "Action failed",
+        mode: contractMode ? "CONTRACT" : "LOCAL_DEMO",
+      });
     }
   }
+
+  const remaining = Math.max(0, new Date(market.locksAt).getTime() - clock);
+  const countdown = market.state === "OPEN"
+    ? `${Math.floor(remaining / 60_000)}m ${Math.floor((remaining % 60_000) / 1_000)}s`
+    : "Closed";
 
   return (
     <section className="panel">
@@ -77,6 +96,7 @@ export function MarketPanel({ market, onChanged }: { market: MarketView | null; 
       </div>
       <div className="market-meta">
         <span>State: <strong>{market.state}</strong></span>
+        <span>Countdown: <strong>{countdown}</strong></span>
         <span>Locks: <time>{new Date(market.locksAt).toLocaleTimeString()}</time></span>
         <span>Total: <strong>{market.totalPool} AUGD</strong></span>
       </div>

@@ -10,8 +10,10 @@ from oracle.battle import (
     BattleOmen,
     BattleResult,
     BattleState,
+    ConfiguredPriceProvider,
     PricePoint,
     PriceSeries,
+    ReplayPriceProvider,
 )
 
 
@@ -125,6 +127,14 @@ class BattleEngineTests(unittest.TestCase):
         )
         self.assertEqual(result.state, BattleState.CANCELLED)
         self.assertEqual(result.cancellation_reason, "CONFLICTING_OMENS")
+
+    def test_price_provider_boundary_never_silently_substitutes_fixture_data(self) -> None:
+        replay = ReplayPriceProvider(self.prices)
+        self.assertEqual(replay.load(self.config), self.prices)
+        configured = ConfiguredPriceProvider("configured:price-service", lambda _: self.prices.points)
+        loaded = configured.load(self.config)
+        self.assertEqual(loaded.source_id, "configured:price-service")
+        self.assertEqual(loaded.points, self.prices.points)
 
 
 if __name__ == "__main__":
