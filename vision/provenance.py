@@ -69,6 +69,7 @@ class ProofOfOmen:
     omen_type: str
     omen_value: str
     omen_sequence: int
+    observed_at_ms: int
     omen_ruleset_version: str
     omen_ruleset_hash: str
     oracle_publisher_id: str
@@ -116,6 +117,8 @@ class ProofOfOmen:
             raise ValueError("unsupported schema version")
         if self.capture_start_ms < 0 or self.capture_end_ms < self.capture_start_ms:
             raise ValueError("invalid capture interval")
+        if not self.capture_start_ms <= self.observed_at_ms <= self.capture_end_ms:
+            raise ValueError("Omen observation falls outside capture interval")
         if self.omen_sequence < 1 or not 0 <= self.behavior_confidence <= 1:
             raise ValueError("invalid sequence or confidence")
         for name in (
@@ -179,6 +182,7 @@ def build_proof(
         omen_type="ZONE_SIGNAL",
         omen_value=omen.value.value,
         omen_sequence=omen.sequence,
+        observed_at_ms=omen.observed_at_ms,
         omen_ruleset_version=omen.ruleset_version,
         omen_ruleset_hash=ruleset_hash,
         oracle_publisher_id=publisher_id,
@@ -223,4 +227,3 @@ class SequenceVerifier:
         if manifest.omen_sequence <= last:
             raise ValueError("Omen sequence must strictly increase per Chamber")
         self._last_sequence[manifest.chamber_id] = manifest.omen_sequence
-

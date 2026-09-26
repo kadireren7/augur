@@ -128,6 +128,17 @@ contract RegistryAndPublisherTest is TestBase {
         );
     }
 
+    function testRoomRegistrationIsAllowlistedUntilPermissionlessMilestone() public {
+        bytes32 secondCreature = keccak256("fish-byte");
+        vm.prank(STRANGER);
+        creatures.registerCreature(
+            secondCreature, CreatureRegistry.Species.Fish, keccak256("fish-metadata"), STRANGER
+        );
+        vm.prank(STRANGER);
+        vm.expectPartialRevert(RoomRegistry.UnauthorizedRegistrar.selector);
+        rooms.registerRoom(keccak256("fish-room"), secondCreature, CONFIG, RULESET, PUBLISHER);
+    }
+
     function _publish(uint64 sequence) internal {
         omens.publish(
             CHAMBER,

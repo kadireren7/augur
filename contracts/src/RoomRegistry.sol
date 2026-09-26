@@ -10,6 +10,7 @@ contract RoomRegistry is IRoomRegistry {
     error InvalidRoomInput();
     error CreatureUnavailable(bytes32 creatureId);
     error Unauthorized(bytes32 creatureId, address account);
+    error UnauthorizedRegistrar(address account);
     error InvalidRoomTransition(RoomStatus from, RoomStatus to);
     error ConfigurationLocked(RoomStatus status);
 
@@ -31,11 +32,13 @@ contract RoomRegistry is IRoomRegistry {
     );
 
     ICreatureRegistry public immutable creatureRegistry;
+    address public immutable administrator;
     mapping(bytes32 chamberId => Room) private _rooms;
 
     constructor(ICreatureRegistry creatureRegistry_) {
         if (address(creatureRegistry_) == address(0)) revert InvalidRoomInput();
         creatureRegistry = creatureRegistry_;
+        administrator = msg.sender;
     }
 
     modifier onlyCreatureAuthority(bytes32 creatureId) {
@@ -52,6 +55,7 @@ contract RoomRegistry is IRoomRegistry {
         bytes32 rulesetHash,
         address publisher
     ) external onlyCreatureAuthority(creatureId) {
+        if (msg.sender != administrator) revert UnauthorizedRegistrar(msg.sender);
         if (
             chamberId == bytes32(0) || configHash == bytes32(0) || rulesetHash == bytes32(0)
                 || publisher == address(0)
