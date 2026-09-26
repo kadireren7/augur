@@ -7,4 +7,12 @@ __pycache__/
 contracts/cache/
 contracts/out/
 oracle/*.sqlite3
-
+web/node_modules/
+web/.next/
+web/coverage/
+web/.env.local
+web/*.tsbuildinfo
+indexer/node_modules/
+indexer/.env
+indexer/.envio/
+indexer/generated/
