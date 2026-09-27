@@ -10,6 +10,7 @@ interface SessionIdentity {
   authenticated: boolean;
   sessionId: string;
   displayName: string;
+  error?: string;
   address?: Address;
   connect(): void;
   disconnect(): Promise<void> | void;
@@ -52,6 +53,7 @@ function PrivySession({ children }: { children: ReactNode }) {
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
   const wallet = wallets[0];
+  const [error, setError] = useState("");
   const value = useMemo<SessionIdentity>(
     () => ({
       mode: "PRIVY",
@@ -59,12 +61,27 @@ function PrivySession({ children }: { children: ReactNode }) {
       authenticated,
       sessionId: wallet?.address ?? user?.id ?? "privy-pending-session",
       displayName: wallet?.address ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}` : "Privy user",
+      error: error || undefined,
       address: wallet?.address as Address | undefined,
-      connect: login,
-      disconnect: logout,
+      connect: async () => {
+        setError("");
+        try {
+          await login();
+        } catch (reason) {
+          setError(reason instanceof Error ? reason.message : "Privy login failed");
+        }
+      },
+      disconnect: async () => {
+        setError("");
+        try {
+          await logout();
+        } catch (reason) {
+          setError(reason instanceof Error ? reason.message : "Privy logout failed");
+        }
+      },
       getProvider: wallet ? () => wallet.getEthereumProvider() : undefined,
     }),
-    [authenticated, login, logout, ready, user?.id, wallet],
+    [authenticated, error, login, logout, ready, user?.id, wallet],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

@@ -10,9 +10,7 @@ export function WalletStatus() {
   }
   if (!session.authenticated) {
     return (
-      <button className="button compact" onClick={session.connect} type="button">
-        Connect with Privy
-      </button>
+      <div className="wallet-row"><button className="button compact" onClick={session.connect} type="button">Connect with Privy</button>{session.error && <span className="error" role="alert">{session.error}</span>}</div>
     );
   }
   return (
@@ -21,6 +19,7 @@ export function WalletStatus() {
       <button className="button secondary compact" onClick={() => void session.disconnect()} type="button">
         Disconnect
       </button>
+      {session.error && <span className="error" role="alert">{session.error}</span>}
     </div>
   );
 }

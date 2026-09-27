@@ -1,4 +1,4 @@
-# Local code-generation configuration. Replace addresses and chain settings after deployment.
+# Local Anvil configuration for the deterministic DeployAugur address set. Replace it after deployment.
 # yaml-language-server: $schema=./node_modules/envio/evm.schema.json
 name: augur-local-indexer
 description: Augur protocol, market, and battle event projections
@@ -12,6 +12,8 @@ contracts:
       - event: "ChamberRegistered(bytes32 indexed chamberId, bytes32 indexed creatureId, bytes32 configHash, bytes32 rulesetHash, address indexed publisher)"
       - event: "ChamberStatusChanged(bytes32 indexed chamberId, uint8 previousStatus, uint8 newStatus)"
       - event: "ChamberConfigurationChanged(bytes32 indexed chamberId, bytes32 configHash, bytes32 rulesetHash, address indexed publisher)"
+      - event: "PermissionlessChamberRegistered(bytes32 indexed chamberId, address indexed owner, uint8 sourceMode, bytes32 indexed rulesetHash)"
+      - event: "ChamberOwnershipSet(bytes32 indexed chamberId, address indexed owner)"
   - name: OmenPublisher
     events:
       - event: "OmenPublished(bytes32 indexed chamberId, bytes32 indexed creatureId, uint64 indexed sequence, uint8 omenType, uint8 behaviorType, uint64 observedAt, bytes32 rulesetHash, bytes32 provenanceHash, address publisher)"
@@ -35,16 +37,16 @@ chains:
   - id: 31337
     start_block: 0
     rpc:
-      - url: http://host.docker.internal:8545
+      - url: http://127.0.0.1:8545
         for: sync
     contracts:
       - name: CreatureRegistry
-        address: "0x0000000000000000000000000000000000000001"
+        address: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
       - name: RoomRegistry
-        address: "0x0000000000000000000000000000000000000002"
+        address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
       - name: OmenPublisher
-        address: "0x0000000000000000000000000000000000000003"
+        address: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
       - name: NextOmenMarket
-        address: "0x0000000000000000000000000000000000000004"
+        address: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
       - name: BattleCoordinator
-        address: "0x0000000000000000000000000000000000000005"
+        address: "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"

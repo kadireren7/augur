@@ -14,6 +14,13 @@ indexer.onEvent(
       operator: event.params.operator,
       active: true,
       registeredAt: BigInt(event.block.timestamp),
+      omenBuy: 0n,
+      omenHold: 0n,
+      omenSell: 0n,
+      battleWins: 0n,
+      battleLosses: 0n,
+      battleTies: 0n,
+      virtualPnl: 0n,
     });
   },
 );
@@ -35,11 +42,36 @@ indexer.onEvent(
       configHash: event.params.configHash,
       rulesetHash: event.params.rulesetHash,
       publisher: event.params.publisher,
-      status: 0,
+      owner: undefined,
+      sourceMode: undefined,
+      status: 1,
       latestSequence: 0n,
       omenCount: 0n,
       volume: 0n,
     });
+  },
+);
+
+indexer.onEvent(
+  { contract: "RoomRegistry", event: "PermissionlessChamberRegistered" },
+  async ({ event, context }) => {
+    const chamber = await context.Chamber.get(event.params.chamberId);
+    if (chamber) {
+      context.Chamber.set({
+        ...chamber,
+        owner: event.params.owner,
+        sourceMode: Number(event.params.sourceMode),
+        rulesetHash: event.params.rulesetHash,
+      });
+    }
+  },
+);
+
+indexer.onEvent(
+  { contract: "RoomRegistry", event: "ChamberOwnershipSet" },
+  async ({ event, context }) => {
+    const chamber = await context.Chamber.get(event.params.chamberId);
+    if (chamber) context.Chamber.set({ ...chamber, owner: event.params.owner });
   },
 );
 
@@ -89,6 +121,16 @@ indexer.onEvent(
         ...chamber,
         latestSequence: sequence,
         omenCount: chamber.omenCount + 1n,
+      });
+    }
+    const creature = await context.Creature.get(event.params.creatureId);
+    if (creature) {
+      const omenType = Number(event.params.omenType);
+      context.Creature.set({
+        ...creature,
+        omenBuy: creature.omenBuy + (omenType === 2 ? 1n : 0n),
+        omenHold: creature.omenHold + (omenType === 1 ? 1n : 0n),
+        omenSell: creature.omenSell + (omenType === 0 ? 1n : 0n),
       });
     }
   },
@@ -238,6 +280,29 @@ indexer.onEvent(
         priceSeriesHash: event.params.priceSeriesHash,
         resolutionHash: event.params.resolutionHash,
       });
+      const [creatureA, creatureB] = await Promise.all([
+        context.Creature.get(battle.creatureA),
+        context.Creature.get(battle.creatureB),
+      ]);
+      const result = Number(event.params.result);
+      if (creatureA) {
+        context.Creature.set({
+          ...creatureA,
+          battleWins: creatureA.battleWins + (result === 0 ? 1n : 0n),
+          battleLosses: creatureA.battleLosses + (result === 1 ? 1n : 0n),
+          battleTies: creatureA.battleTies + (result === 2 ? 1n : 0n),
+          virtualPnl: creatureA.virtualPnl + event.params.pnlA,
+        });
+      }
+      if (creatureB) {
+        context.Creature.set({
+          ...creatureB,
+          battleWins: creatureB.battleWins + (result === 1 ? 1n : 0n),
+          battleLosses: creatureB.battleLosses + (result === 0 ? 1n : 0n),
+          battleTies: creatureB.battleTies + (result === 2 ? 1n : 0n),
+          virtualPnl: creatureB.virtualPnl + event.params.pnlB,
+        });
+      }
     }
   },
 );

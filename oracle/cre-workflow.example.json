@@ -1,6 +1,7 @@
 {
   "workflow_id": "augur-omen-validation-v1",
   "input": {
+    "workflow_version": "1.0.0",
     "manifest_hash": "sha256 manifest commitment",
     "chamber_id": "registered Chamber identifier",
     "creature_id": "registered Creature identifier",
@@ -10,6 +11,8 @@
   },
   "required_response": {
     "workflow_id": "must match requested workflow",
+    "workflow_version": "must match requested workflow version",
+    "execution_id": "non-empty unique workflow execution identifier",
     "manifest_hash": "must match request",
     "chamber_id": "must match request",
     "sequence": "must match request",

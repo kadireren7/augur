@@ -1,6 +1,6 @@
 # Augur Envio indexer
 
-This is a real HyperIndex event projection for the Augur contracts. The committed `config.yaml` is intentionally local-only: its five addresses are code-generation placeholders, not deployments.
+This is a real HyperIndex event projection for the Augur contracts. The committed `config.yaml` is intentionally local-only: its addresses are the deterministic output of `DeployAugur` on a fresh Anvil chain, not a Monad deployment.
 
 After deploying contracts, replace the chain ID, start block, RPC, and addresses; set `ENVIO_API_TOKEN` in an untracked `.env`; then run:
 

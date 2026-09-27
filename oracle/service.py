@@ -53,13 +53,13 @@ class OracleService:
             raise ValueError("future source segment")
         if now_ms - manifest.capture_end_ms > self.policy.max_staleness_ms:
             raise ValueError("stale source segment")
-        if not self.workflow.validate(manifest):
-            raise ValueError("workflow validation rejected manifest")
-
         existing = self.store.get(manifest.manifest_hash)
         if existing and existing.status == "PUBLISHED":
             assert existing.receipt is not None
             return PublicationReceipt(**existing.receipt)
+
+        if not self.workflow.validate(manifest):
+            raise ValueError("workflow validation rejected manifest")
 
         owner = self.store.sequence_owner(manifest.chamber_id, manifest.omen_sequence)
         if owner is not None and owner != manifest.manifest_hash:

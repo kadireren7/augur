@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import unittest
 import hashlib
+import time
+import unittest
+from dataclasses import replace
 
 from oracle.workflow import ChainlinkCREWorkflowAdapter
 from vision.engine import VisionEngine, default_ruleset
@@ -48,6 +50,8 @@ class WorkflowBoundaryTests(unittest.TestCase):
         client = StubCREClient(
             {
                 "workflow_id": "augur-omen-validation-v1",
+                "workflow_version": "1.0.0",
+                "execution_id": "execution-1",
                 "manifest_hash": manifest.manifest_hash,
                 "chamber_id": manifest.chamber_id,
                 "sequence": manifest.omen_sequence,
@@ -63,6 +67,8 @@ class WorkflowBoundaryTests(unittest.TestCase):
         client = StubCREClient(
             {
                 "workflow_id": "augur-omen-validation-v1",
+                "workflow_version": "1.0.0",
+                "execution_id": "execution-2",
                 "manifest_hash": "0" * 64,
                 "chamber_id": manifest.chamber_id,
                 "sequence": manifest.omen_sequence,
@@ -71,6 +77,41 @@ class WorkflowBoundaryTests(unittest.TestCase):
         )
         adapter = ChainlinkCREWorkflowAdapter("augur-omen-validation-v1", client)
         with self.assertRaisesRegex(ValueError, "manifest binding"):
+            adapter.validate(manifest)
+
+    def test_cre_adapter_is_idempotent_and_rejects_sequence_replay(self) -> None:
+        manifest = self.manifest()
+        client = StubCREClient(
+            {
+                "workflow_id": "workflow",
+                "workflow_version": "1.0.0",
+                "execution_id": "execution-1",
+                "manifest_hash": manifest.manifest_hash,
+                "chamber_id": manifest.chamber_id,
+                "sequence": manifest.omen_sequence,
+                "accepted": True,
+            }
+        )
+        adapter = ChainlinkCREWorkflowAdapter("workflow", client)
+        self.assertTrue(adapter.validate(manifest))
+        self.assertTrue(adapter.validate(manifest))
+        conflicting = replace(manifest, evidence_uri="fixture://different", manifest_hash="").seal()
+        with self.assertRaisesRegex(ValueError, "replay or regression"):
+            adapter.validate(conflicting)
+
+    def test_cre_timeout_fails_explicitly(self) -> None:
+        manifest = self.manifest()
+
+        class SlowClient:
+            def execute(self, workflow_id: str, request: dict) -> dict:
+                del workflow_id, request
+                time.sleep(0.05)
+                return {}
+
+        adapter = ChainlinkCREWorkflowAdapter(
+            "workflow", SlowClient(), timeout_seconds=0.001
+        )
+        with self.assertRaisesRegex(TimeoutError, "timed out"):
             adapter.validate(manifest)
 
 
