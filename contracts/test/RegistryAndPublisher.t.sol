@@ -128,7 +128,7 @@ contract RegistryAndPublisherTest is TestBase {
         );
     }
 
-    function testRoomRegistrationIsAllowlistedUntilPermissionlessMilestone() public {
+    function testPermissionlessRegistrationIsDisabledByDefault() public {
         bytes32 secondCreature = keccak256("fish-byte");
         vm.prank(STRANGER);
         creatures.registerCreature(
@@ -137,6 +137,87 @@ contract RegistryAndPublisherTest is TestBase {
         vm.prank(STRANGER);
         vm.expectPartialRevert(RoomRegistry.UnauthorizedRegistrar.selector);
         rooms.registerRoom(keccak256("fish-room"), secondCreature, CONFIG, RULESET, PUBLISHER);
+    }
+
+    function testGuardedPermissionlessRegistrationAndOwnership() public {
+        bytes32 secondCreature = keccak256("fish-byte");
+        bytes32 secondRoom = keccak256("fish-room");
+        vm.prank(STRANGER);
+        creatures.registerCreature(
+            secondCreature, CreatureRegistry.Species.Fish, keccak256("fish-metadata"), STRANGER
+        );
+        rooms.setRulesetAllowed(RULESET, true);
+        rooms.configurePermissionless(true, 2);
+
+        vm.prank(STRANGER);
+        rooms.registerPermissionlessRoom(
+            secondRoom,
+            secondCreature,
+            CONFIG,
+            RULESET,
+            PUBLISHER,
+            RoomRegistry.SourceMode.UploadedClip
+        );
+        assertEq(rooms.chamberOwner(secondRoom), STRANGER);
+        assertEq(uint256(rooms.roomsByOwner(STRANGER)), 1);
+
+        vm.prank(PUBLISHER);
+        vm.expectPartialRevert(RoomRegistry.Unauthorized.selector);
+        rooms.updateConfiguration(secondRoom, keccak256("next-config"), RULESET, PUBLISHER);
+
+        vm.prank(STRANGER);
+        vm.expectPartialRevert(RoomRegistry.RulesetNotAllowed.selector);
+        rooms.updateConfiguration(
+            secondRoom, keccak256("next-config"), keccak256("arbitrary-rules"), STRANGER
+        );
+
+        vm.prank(STRANGER);
+        rooms.updateConfiguration(secondRoom, keccak256("next-config"), RULESET, STRANGER);
+        vm.prank(STRANGER);
+        rooms.setStatus(secondRoom, IRoomRegistry.RoomStatus.Active);
+        rooms.setStatus(secondRoom, IRoomRegistry.RoomStatus.Paused);
+    }
+
+    function testPermissionlessRulesAndDuplicatesAreRejected() public {
+        bytes32 secondCreature = keccak256("fish-byte");
+        bytes32 secondRoom = keccak256("fish-room");
+        vm.prank(STRANGER);
+        creatures.registerCreature(
+            secondCreature, CreatureRegistry.Species.Fish, keccak256("fish-metadata"), STRANGER
+        );
+        rooms.configurePermissionless(true, 1);
+
+        vm.prank(STRANGER);
+        vm.expectPartialRevert(RoomRegistry.RulesetNotAllowed.selector);
+        rooms.registerPermissionlessRoom(
+            secondRoom,
+            secondCreature,
+            CONFIG,
+            RULESET,
+            PUBLISHER,
+            RoomRegistry.SourceMode.FixtureReplay
+        );
+
+        rooms.setRulesetAllowed(RULESET, true);
+        vm.prank(STRANGER);
+        rooms.registerPermissionlessRoom(
+            secondRoom,
+            secondCreature,
+            CONFIG,
+            RULESET,
+            PUBLISHER,
+            RoomRegistry.SourceMode.FixtureReplay
+        );
+        vm.prank(STRANGER);
+        vm.expectPartialRevert(RoomRegistry.RoomLimitReached.selector);
+        rooms.registerPermissionlessRoom(
+            keccak256("another-room"),
+            secondCreature,
+            CONFIG,
+            RULESET,
+            PUBLISHER,
+            RoomRegistry.SourceMode.FixtureReplay
+        );
     }
 
     function _publish(uint64 sequence) internal {

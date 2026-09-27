@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import { IRoomRegistry } from "./interfaces/IRoomRegistry.sol";
+
 contract BattleCoordinator {
     enum BattleState {
         None,
@@ -32,6 +34,7 @@ contract BattleCoordinator {
         int256 pnlB;
         BattleResult result;
         bytes32 priceSeriesHash;
+        bytes32 resolutionHash;
         bytes32 cancellationReason;
         bool exists;
     }
@@ -70,14 +73,19 @@ contract BattleCoordinator {
 
     address public immutable operator;
     address public immutable resultPublisher;
+    IRoomRegistry public immutable roomRegistry;
     mapping(bytes32 battleId => Battle) private _battles;
 
-    constructor(address operator_, address resultPublisher_) {
-        if (operator_ == address(0) || resultPublisher_ == address(0)) {
+    constructor(address operator_, address resultPublisher_, IRoomRegistry roomRegistry_) {
+        if (
+            operator_ == address(0) || resultPublisher_ == address(0)
+                || address(roomRegistry_) == address(0)
+        ) {
             revert InvalidBattleInput();
         }
         operator = operator_;
         resultPublisher = resultPublisher_;
+        roomRegistry = roomRegistry_;
     }
 
     function createBattle(
@@ -100,6 +108,13 @@ contract BattleCoordinator {
                 || chamberA == chamberB || asset == bytes32(0) || startsAt >= endsAt
                 || startingNotional == 0 || scoringConfigHash == bytes32(0)
         ) revert InvalidBattleInput();
+        IRoomRegistry.Room memory roomA = roomRegistry.getRoom(chamberA);
+        IRoomRegistry.Room memory roomB = roomRegistry.getRoom(chamberB);
+        if (
+            roomA.creatureId != creatureA || roomB.creatureId != creatureB
+                || roomA.status != IRoomRegistry.RoomStatus.Active
+                || roomB.status != IRoomRegistry.RoomStatus.Active
+        ) revert InvalidBattleInput();
         _battles[battleId] = Battle({
             creatureA: creatureA,
             creatureB: creatureB,
@@ -115,6 +130,7 @@ contract BattleCoordinator {
             pnlB: 0,
             result: BattleResult.Tie,
             priceSeriesHash: bytes32(0),
+            resolutionHash: bytes32(0),
             cancellationReason: bytes32(0),
             exists: true
         });
@@ -172,6 +188,7 @@ contract BattleCoordinator {
         battle.pnlB = pnlB;
         battle.result = result;
         battle.priceSeriesHash = priceSeriesHash;
+        battle.resolutionHash = resolutionHash;
         battle.state = BattleState.Resolved;
         emit BattleResolved(battleId, result, pnlA, pnlB, priceSeriesHash, resolutionHash);
     }

@@ -38,7 +38,7 @@ contract DeployAugur {
         omens = new OmenPublisher(rooms, creatures);
         token = new DemoToken();
         markets = new NextOmenMarket(token, omens, deployer);
-        battles = new BattleCoordinator(deployer, deployer);
+        battles = new BattleCoordinator(deployer, deployer, rooms);
         vm.stopBroadcast();
     }
 }
