@@ -2,7 +2,7 @@
 
 ## Status and principles
 
-Augur has a tested local **M1–M6 product**. Vision, provenance, oracle, and battle replay run in Python; protocol, Next Omen market, and battle commitment contracts run in Foundry; and the functional product layer runs in Next.js. The E2E harness and unconfigured web mode use explicit local adapters rather than an EVM node. No contract is deployed to Monad, and no hosted sponsor integration is represented as active.
+Augur has a tested local **M1–M8 product**. Vision, provenance, oracle, and battle replay run in Python; protocol, Next Omen market, guarded Chamber registration, and battle commitments run in Foundry; the product and speed showcase run in Next.js; and application/social data persists in SQLite. Contracts, HyperIndex, GraphQL, and indexed web reads were integrated on Anvil. No contract is deployed to Monad, and no credentialed or hosted sponsor integration is represented as active.
 
 The architecture follows four principles:
 
@@ -33,7 +33,7 @@ Approved camera / stream
           +------ authoritative events     +-- offchain chat / reactions
 ```
 
-The diagram shows the target deployed topology. Local equivalents exist for vision, provenance, oracle validation, publication journaling, market cycling, social interaction, battle replay, Chronicle projection, and the web product. Hosted storage, Monad submission, and hosted indexing remain undeployed.
+The diagram shows the target deployed topology. Local equivalents exist for vision, provenance, oracle validation, publication journaling, market cycling, persistent social interaction, battle replay, Chronicle projection, guarded creation, speed mode, and the web product. Anvil-to-Envio-to-web reads are verified; Monad submission and hosted indexing remain undeployed.
 
 ## End-to-end data flow
 
@@ -79,7 +79,7 @@ Onchain code must not pretend to verify pixels. It verifies authorization, timin
 
 ### `vision/`
 
-The vision package currently accepts controlled JSON centroid trajectories and Chamber configuration. It produces:
+The vision package currently accepts controlled JSON centroid trajectories and Chamber configuration. A safe recorded-source adapter resolves only named files inside a configured fixture directory, rejects paths/URLs, and preserves deterministic replay. A browser-camera boundary explicitly refuses to claim server-side capture. It produces:
 
 - normalized segment metadata and a source hash;
 - timestamped detections with labels, geometry or state, and confidence;
@@ -87,7 +87,7 @@ The vision package currently accepts controlled JSON centroid trajectories and C
 - model and preprocessing versions; and
 - diagnostics for rejected or ambiguous candidates.
 
-The engine implements zone occupancy/entry/exit, directional movement, inactivity, confidence rejection, conflict rejection, debounce, cooldown, and monotonic Chamber sequences. Hamster, Fish, and Turtle fixtures have separate timing/movement parameters. A real video-to-centroid adapter remains planned. Creature-specific thresholds and cooldowns belong to versioned rules, not hidden UI logic. This module never publishes directly to contracts.
+The engine implements zone occupancy/entry/exit, directional movement, inactivity, confidence rejection, conflict rejection, debounce, cooldown, and monotonic Chamber sequences. Hamster, Fish, and Turtle fixtures have separate timing/movement parameters. Actual video-to-centroid extraction and browser capture remain planned. Creature-specific thresholds and cooldowns belong to versioned rules, not hidden UI logic. This module never publishes directly to contracts.
 
 ### `oracle/`
 
@@ -96,7 +96,7 @@ The oracle service is the policy and provenance boundary between perception and 
 - validates Chamber and creature authorization, freshness, and sequence monotonicity;
 - verifies source, detection, ruleset, and manifest hashes rather than remapping or generating Omens;
 - rejects stale, conflicting, malformed, or incomplete inputs;
-- uses an executable local workflow validator and an explicit, unconfigured Chainlink CRE boundary;
+- uses an executable local workflow validator and an explicit Chainlink CRE boundary with workflow/version, Chamber, sequence, provenance, replay, and timeout binding;
 - exposes a dependency-injected EVM transaction-intent publisher without holding signing keys;
 - publishes idempotently through a SQLite attempt journal; and
 - records failed attempts for safe retry.
@@ -108,7 +108,7 @@ Oracle signing keys must be isolated from the vision process. A compromised infe
 The implemented contracts are logically separated into:
 
 - **Creature Registry:** stable creature IDs, metadata commitments, species, and status.
-- **Room Registry:** Chamber IDs, creature binding, configuration commitment, oracle authorization, and lifecycle.
+- **Room Registry:** Chamber IDs, creature binding, configuration commitment, oracle authorization, ownership/lifecycle, disabled-by-default permissionless policy, exact ruleset allowlisting, and per-owner limits.
 - **Omen Publisher:** ordered Omen records, provenance commitments, replay protection, and publisher permissions.
 - **Market Factory / Market:** creation policy, outcome definitions, deadlines, prediction accounting, lock, resolve, cancel, refund, and claim.
 - **Demo Token:** a permissionlessly mintable local/test token that must not be treated as a production asset.
@@ -129,12 +129,14 @@ The implemented functional web application contains:
 - wallet onboarding and transaction status;
 - offchain chat, reactions, moderation, and presence; and
 - a health view for data mode, RPC/chain state, contract configuration, sponsor configuration, and local sequences.
+- guarded Chamber preparation/creation and owner lifecycle flows; and
+- a concurrent local speed showcase with bounded operations and measured local durations.
 
-Local mode uses in-memory deterministic state, never creates a fake transaction hash, and resets on server restart. Contract mode uses typed viem calldata, checks wallet chain ID, and waits for a receipt when a public RPC is configured. Privy is loaded only when an app ID exists; otherwise the UI says that the local session is unauthenticated. Chat and reactions have no import path to oracle or market resolution code.
+Local mode uses deterministic fixture market state and SQLite for created Chambers, chat, and reactions; it never creates a fake transaction hash. Contract mode uses typed viem calldata, validates the onchain permissionless policy before the first registration write, checks wallet chain ID, and waits for a receipt. Privy is loaded only when an app ID exists; otherwise the UI says that the local session is unauthenticated. Chat and reactions have no import path to oracle or market resolution code. SQLite is a hackathon persistence adapter, not protocol truth or a horizontally scalable production database.
 
 ### `indexer/`
 
-The Envio HyperIndex project defines entities and typed handlers for creatures, Chambers, Omens, markets, predictions, claim/refund actions, and battles. Its committed configuration targets local chain `31337` with conspicuous code-generation placeholder addresses. `envio codegen` and TypeScript checks run locally; replacing the chain, start block, RPC, and addresses after deployment is mandatory before indexing real events.
+The Envio HyperIndex project defines entities and typed handlers for creatures, Chambers, Omens, markets, predictions, claim/refund actions, and battles. Its committed configuration targets chain `31337` and the deterministic addresses produced by `DeployAugur` on a fresh Anvil chain. Code generation, TypeScript checks, local event ingestion, GraphQL queries, and the web indexed data source were exercised. Replacing the chain, start block, RPC, and addresses after deployment is mandatory before indexing real events.
 
 ## Sponsor integration roles
 
@@ -142,15 +144,15 @@ No hosted sponsor integration is active. Current implementation and remaining co
 
 ### Envio
 
-Envio is **implemented locally but not running against a deployment**. `indexer/` contains a real schema, configuration, and typed handlers for Registry, Omen, market, prediction, settlement, claim/refund, and battle events. Code generation and type-checking pass. A deployed address set, Envio API token, Docker-backed local service or hosted deployment, and the final application query projection remain outstanding. Envio is not the settlement authority; if an indexed view disagrees with finalized contract state, contract state wins.
+Envio is **implemented and verified locally, but not hosted or connected to Monad**. `indexer/` contains a schema, deterministic Anvil configuration, and typed handlers for Registry, Omen, market, prediction, settlement, claim/refund, and battle events. The Docker-backed service indexed the Anvil smoke transactions and the web query layer returned those projections without fixture fallback. A Monad address set and hosted deployment remain outstanding. Envio is not the settlement authority; if an indexed view disagrees with finalized contract state, contract state wins.
 
 ### Chainlink CRE
 
-Chainlink CRE remains **unconfigured for real execution**. `oracle/workflow.py` constructs a bounded validation request and requires the response to match the workflow ID, manifest hash, Chamber, and sequence before accepting it. The adapter fails explicitly without an injected real client; local tests use the deterministic fallback and a stub transport only to test binding. Credentials, a deployed workflow, and an SDK/runtime transport remain outstanding. CRE does not make a low-quality camera source truthful, so source integrity and evidence commitments remain explicit trust boundaries.
+Chainlink CRE remains **unconfigured for real execution**. `oracle/workflow.py` constructs a deterministic bounded request and requires workflow ID/version, manifest hash, Chamber, and sequence to match the response. Accepted manifests and per-Chamber sequences are replay-protected, requests time out explicitly, and the adapter never falls back after a configured transport fails. Local tests use injected transports to exercise the binding; credentials, a deployed workflow, and an SDK/runtime client remain outstanding. CRE does not make a low-quality camera source truthful.
 
 ### Alchemy
 
-Alchemy remains **unconfigured**. Deployment, oracle, server health, and browser transaction RPC values come from separate environment variables. The web health check reports reachability and chain mismatches without returning the endpoint, while viem uses the configured browser RPC for confirmation. An Alchemy Monad endpoint can be supplied without changing domain validation. Local tests make no external RPC calls.
+Alchemy remains **externally unconfigured**. The server explicitly prefers `ALCHEMY_MONAD_RPC_URL` over `MONAD_RPC_URL`; browser signing uses a deliberately public RPC value. The provider checks chain ID, latest block, bytecode at every configured contract, transaction receipts, mismatch, and failure without exposing the endpoint. Those paths were exercised on Anvil, including wrong-chain and unavailable-RPC states; no Alchemy endpoint or external transaction was available.
 
 ### Privy
 
@@ -166,6 +168,9 @@ CreatureRegistered
 
 ChamberRegistered
   chamberId, creatureId, configHash, rulesetHash, publisher
+
+PermissionlessChamberRegistered / ChamberOwnershipSet
+  chamberId, owner, sourceMode, rulesetHash
 
 ChamberStatusChanged / ChamberConfigurationChanged
   chamberId, previousStatus/newStatus or configHash/rulesetHash/publisher
@@ -215,6 +220,8 @@ Sensitive data, long strings, and large arrays should not appear in events. Stab
 - **Price-data boundary:** stale or incorrect prices corrupt PnL. Markets pin their price source and freshness rules and cancel when inputs are invalid.
 - **Indexing/RPC boundary:** derived data can lag or be wrong. The UI exposes freshness and verifies critical state against contracts.
 - **Identity/social boundary:** account compromise or chat abuse must not affect oracle or settlement roles. Authentication, moderation, and protocol permissions remain separated.
+- **Creation boundary:** only fixed species/source/template enums, safe non-URL references, bounded metadata/numbers, exact reviewed ruleset hashes, owner authorization, and per-owner limits cross into registration. Arbitrary code, paths, and server-side URL fetches are rejected.
+- **Persistence boundary:** SQLite stores product metadata and social state only. Indexed/onchain protocol truth is not overwritten by database records, and production deployment requires a managed storage adapter.
 - **Evidence-storage boundary:** a hash ensures integrity but not availability or public access. Retention and access policies must be explicit.
 - **Administrative boundary:** any pause, publisher rotation, upgrade, or treasury capability must be narrow, visible, and documented.
 

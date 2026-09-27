@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines intended product behavior and protocol rules. The repository now contains a tested local **M1–M6 product**: controlled-fixture vision, Proof of Omen generation and validation, protocol contracts, a test-token Next Omen market, a local oracle/E2E harness, functional Live Chambers, deterministic battles, and Chronicle views. Live media ingestion, the other two market implementations, configured sponsor services, and Monad deployment remain planned.
+This document defines intended product behavior and protocol rules. The repository now contains a tested local **M1–M8 product**: controlled-fixture vision, Proof of Omen generation and validation, protocol contracts, a test-token Next Omen market, a local oracle/E2E harness, Live Chambers, deterministic battles, Chronicle, guarded Chamber creation, and concurrent speed mode. Live media ingestion, the other two market implementations, configured sponsor services, and Monad deployment remain planned.
 
 ## Goals
 
@@ -19,7 +19,7 @@ This document defines intended product behavior and protocol rules. The reposito
 - Claiming that animals understand markets, make financial decisions, or predict asset prices.
 - Storing raw video, chat messages, reactions, or computer-vision tensors onchain.
 - Treating a model output as unquestionable truth.
-- Supporting arbitrary species, arbitrary user-created rules, or permissionless rooms in the MVP.
+- Supporting arbitrary species, arbitrary executable user rules, or unguarded room creation.
 - Delivering production custody, regulated wagering, or mainnet real-money markets during the initial prototype.
 - Guaranteeing profit, predictive accuracy, or uninterrupted livestream availability.
 
@@ -124,9 +124,15 @@ Chronicle rankings should distinguish prediction performance from creature battl
 
 Chat and crowd reactions are offchain, latency-sensitive social features. The local product uses session-scoped display names, schema validation, message escaping, basic moderation hooks, bounded retention, and rate limits. They cannot resolve markets, alter Omen ordering, or serve as oracle evidence. Only aggregate reaction counts that add product value should be retained, subject to a documented privacy and retention policy.
 
-## Permissionless room creation
+## Guarded room creation
 
-Permissionless Chamber creation is a **later milestone**, not part of the MVP. It requires creator staking or anti-spam controls, media-source verification, ruleset constraints, oracle enrollment, moderation, animal-welfare review, metadata validation, and a process for suspension and disputes. Initially, rooms are allowlisted and configured by the project operator.
+M7 supports user-created Chambers through a constrained flow, not arbitrary code execution. Creators choose Hamster, Fish, or Turtle; a fixture/replay, controlled-upload reference, or browser adapter boundary; one of three fixed behavior-to-Omen templates; bounded confidence and movement parameters; and a bounded asset label. Metadata and safe source references are schema-validated, rate-limited, and persisted locally. The server never fetches creator-supplied URLs or accepts filesystem paths.
+
+Onchain registration is disabled by default. An administrator must enable it, set a per-owner room limit, and allowlist the exact reviewed ruleset commitment. The creature owner or authorized operator submits registration; the resulting Chamber has an explicit owner and publisher. Only its owner may rotate configuration/publisher while Draft or Paused, activate, pause, or close it; the administrator may emergency-pause. Creator staking remains optional/planned. Production media verification, moderation operations, disputes, and oracle enrollment still require deployment policy.
+
+## Showcase mode
+
+M8's local showcase repeatedly runs `OPEN → predictions → LOCK → Omen → RESOLVE/CANCEL → next round` for at least two independent fixture Chambers. Round duration is bounded to 5–15 seconds at the API, prediction generation is bounded, sequences and market IDs stay Chamber-scoped, and failures are counted rather than hidden. Timings are measured process durations labeled `LOCAL`; they are not Monad latency or TPS claims. Testnet mode must instead measure submitted, inclusion, receipt, and indexed timestamps from real transactions.
 
 ## Failure cases
 
@@ -155,7 +161,7 @@ Permissionless Chamber creation is a **later milestone**, not part of the MVP. I
 
 ## MVP boundaries
 
-The runnable M1–M6 product is limited to allowlisted Chambers, three creature fixture types, a small fixed behavior vocabulary, a local oracle path, demo assets, the Next Omen market, in-memory social state, and deterministic replay battles. Extensible market type definitions reserve Next Trade Profitable and Creature Battle Winner, but neither lifecycle is implemented. It targets local tests and a demonstration flow, not production wagering. Raw media, inference, chat, reactions, price fixtures, and large provenance artifacts remain offchain. Permissionless rooms, decentralized dispute resolution, arbitrary market creation, production governance, mobile applications, and guaranteed evidence availability are outside the MVP.
+The runnable M1–M8 product is limited to guarded Chambers, three creature fixture types, a small fixed behavior vocabulary, a local oracle path, demo assets, the Next Omen market, SQLite-backed application/social state, deterministic replay battles, and a local speed showcase. Extensible market types reserve Next Trade Profitable and Creature Battle Winner, but neither lifecycle is implemented. It targets local/testnet demonstrations, not production wagering. Raw media, inference, chat, reactions, price fixtures, and large provenance artifacts remain offchain. Unguarded arbitrary rules, decentralized disputes, arbitrary market creation, production governance, mobile applications, and guaranteed evidence availability remain outside the MVP.
 
 ## M0 success criteria (completed)
 

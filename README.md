@@ -2,7 +2,7 @@
 
 Augur is a hackathon project that turns observable animal behavior into verifiable onchain events and short, real-time prediction markets on Monad. A live creature room is a **Chamber**; a detected physical action becomes a **Behavior**; and a ruleset can map that behavior into an **Omen** such as BUY, HOLD, or SELL.
 
-Augur has a tested local **M1–M6 product**: deterministic fixture-based vision, Proof of Omen provenance, EVM-compatible protocol and market contracts, an idempotent oracle bridge, functional Live Chambers, offchain social features, deterministic creature battles, and Chronicle views. Nothing is deployed to Monad, and hosted sponsor services remain unconfigured.
+Augur has a tested local **M1–M8 product**: deterministic fixture-based vision, Proof of Omen provenance, EVM-compatible protocol and market contracts, an idempotent oracle bridge, Live Chambers, persistent social features, deterministic creature battles, Chronicle, guarded Chamber creation, and a concurrent speed showcase. The full contract-to-Envio-to-web read path has been verified on Anvil. Nothing is deployed to Monad, and credentialed sponsor services remain unconfigured.
 
 ## Problem and concept
 
@@ -34,13 +34,17 @@ Implemented and tested locally:
 - A deterministic battle engine and compact onchain `BattleCoordinator` result commitment.
 - A real Privy SDK path with an explicit unauthenticated local fallback, typed viem contract writes, RPC health and wrong-chain checks, and environment-driven Alchemy-compatible RPC configuration.
 - An Envio HyperIndex project whose code generation and typed handlers cover registry, Chamber, Omen, market, claim/refund, and battle events.
+- Guarded Chamber creation with wallet ownership, exact ruleset allowlisting, bounded metadata and thresholds, safe source references, lifecycle controls, and per-owner limits.
+- SQLite persistence for created Chambers, chat, and reactions; protocol and market truth remains onchain/indexed.
+- A `/showcase` harness for independent repeated cycles across two Chambers, measured local timings, and bounded prediction-load tests.
+- Deployment verification and split smoke scripts tested against Anvil, including registry, publication, market, claim, RPC health, and local Envio indexing.
 
-Planned for M7 and later, or still pending external configuration:
+Still pending external configuration or later work:
 
 - Real live creature media and a production media/centroid adapter; the UI currently says `FIXTURE · NOT LIVE`.
-- Monad deployment, real contract addresses, a hosted Envio endpoint, Privy credentials, and execution through a configured Chainlink CRE transport.
+- Monad deployment, testnet contract addresses, a hosted Envio endpoint, Privy credentials, and execution through a configured Chainlink CRE transport.
 - Next-trade-profitable markets and battle-winner markets; only their extensible type definitions exist today.
-- Guarded permissionless Chamber creation and third-party event consumption.
+- A production upload pipeline and browser camera capture; current user-created sources are safe references/adapters, not server-side arbitrary URL fetches.
 
 ## Architecture summary
 
@@ -52,11 +56,11 @@ Augur is separated into five modules:
 - `indexer/` contains the Envio schema, local code-generation configuration, and typed event projections.
 - `web/` contains the functional Next.js product layer and its local/contract/indexed data boundaries.
 
-Privy's SDK path and typed transaction signing boundary are implemented, but no app ID has been configured. Alchemy-compatible RPC configuration needs only an endpoint; no RPC was supplied during verification. Envio code generation and handler type-checking work locally, but the committed addresses are local placeholders and no hosted indexer is running. The CRE request/response binding is implemented with a local validator fallback, but no real CRE client or workflow execution is claimed.
+Privy's SDK path and typed transaction signing boundary are implemented, but no app ID has been configured. The Alchemy-compatible provider performs chain, block, receipt, and bytecode checks, but no external endpoint was supplied. Envio code generation, handlers, local indexing, GraphQL queries, and the indexed web source were exercised on Anvil; no hosted indexer is running. The CRE adapter enforces workflow/version, Chamber, sequence, provenance, replay, and timeout binding, but no real CRE client or workflow execution is claimed.
 
 ## Milestone status
 
-**Current: M5 and M6 complete as a functional local product layer.** The Chamber and social flows run in the web application, while battles and Chronicle are reproducible from declared fixture and scoring inputs. Contract-mode writes, indexed reads, and Privy onboarding are wired but activate only when their real configuration exists. Monad deployment, hosted indexing, real CRE execution, and live media ingestion remain outstanding.
+**Current: M7 and M8 are locally implemented and tested.** User-created Chambers and social data persist in SQLite, contract mode uses guarded registry policy, and speed mode runs repeated independent Chamber cycles. Deployment and Envio roundtrips work on Anvil. Monad testnet deployment, credentialed Privy login, an external Alchemy endpoint, hosted Envio, real CRE execution, and live media ingestion remain outstanding.
 
 ## Developer workflow
 
@@ -82,6 +86,9 @@ make demo
 # Run the functional web app at http://localhost:3000
 make dev-web
 
+# Run the local Envio service after starting/deploying a fresh Anvil chain
+make dev-indexer
+
 # Compile Python and check Solidity formatting
 make lint
 
@@ -89,9 +96,9 @@ make lint
 make build-web
 ```
 
-With no environment variables, the web app uses clearly labeled in-memory fixture/local-demo state. Copy `web/.env.example` to `web/.env.local` to enable optional runtime boundaries. `NEXT_PUBLIC_PRIVY_APP_ID` enables the real Privy provider. RPC and contract variables enable typed wallet writes only for markets reported as contract-backed; local mode never emits a transaction hash. `ENVIO_GRAPHQL_URL` selects indexed reads and does not silently fall back on request failure.
+With no environment variables, the web app uses clearly labeled fixture/local-demo state and a local SQLite database at `web/.augur/augur.sqlite3`. Copy `web/.env.example` to `web/.env.local` to enable optional runtime boundaries. `NEXT_PUBLIC_PRIVY_APP_ID` enables the real Privy provider. RPC and contract variables enable typed wallet writes only for contract-backed operations; local mode never emits a transaction hash. Server RPC selection prefers `ALCHEMY_MONAD_RPC_URL`, then `MONAD_RPC_URL`; the browser uses the deliberately public `NEXT_PUBLIC_MONAD_RPC_URL`. `ENVIO_GRAPHQL_URL` selects indexed reads and does not silently fall back on request failure.
 
-The Envio project is in `indexer/`. Its committed chain and addresses are local code-generation placeholders. After a deployment, replace them in `indexer/config.yaml`, put `ENVIO_API_TOKEN` in the ignored `indexer/.env`, and run `pnpm dev` from that directory. Docker is required for the local database and GraphQL service.
+The Envio project is in `indexer/`. Its committed addresses match `DeployAugur` on a fresh Anvil chain and are not testnet addresses. After a real deployment, replace the chain, start block, RPC, and addresses in `indexer/config.yaml`, put any token in the ignored `indexer/.env`, and run `pnpm dev`. Docker is required for the local database and GraphQL service.
 
 For an environment-driven deployment, copy `.env.example`, provide a Monad-compatible RPC URL and deployer key, then run:
 
@@ -101,17 +108,19 @@ forge script script/Deploy.s.sol:DeployAugur --rpc-url "$MONAD_RPC_URL" --broadc
 ```
 
 The deployment command has not been run against Monad. `DemoToken` has permissionless minting and is strictly for tests and demonstrations.
+Run `VerifyDeployment.s.sol` after deployment, then use `SmokeSetup.s.sol` and `SmokeResolve.s.sol` as documented in `deployments/README.md`. Permissionless registration is disabled by default and must be enabled only after exact ruleset commitments are reviewed and allowlisted.
 
 ## Current limitations
 
 - Vision consumes controlled JSON centroid trajectories; it does not yet extract centroids from arbitrary video.
-- The executable E2E uses the local publisher and local market model. The same lifecycle is contract-tested, but the Python harness is not yet wired to a local EVM node.
+- Python E2E uses the local publisher and market model; a separate Anvil smoke flow verifies the real Solidity lifecycle and indexed web read path.
 - Privy requires a real app ID; no authenticated session was exercised. Alchemy requires a Monad RPC endpoint; no external RPC health check was exercised.
-- Envio handlers are generated and type-checked, but no deployed addresses, API token, Docker-backed local service, or hosted endpoint was available.
+- Envio was exercised locally with Docker and Anvil, but no Monad deployment or hosted endpoint was available.
 - The CRE adapter validates response binding, but no real CRE SDK transport or workflow execution was available.
 - Only Next Omen is implemented as a market. Profitability and battle markets remain planned.
 - Battle scoring runs deterministically offchain and commits final results through `BattleCoordinator`; its publisher remains a trust boundary. A battle-winner prediction market is not implemented.
-- Web local state, chat, and reactions are in memory and reset when the server restarts.
+- Created Chambers, chat, and reactions persist in local SQLite. Seed fixture markets/showcase counters remain process-local, and production deployment needs a managed database adapter.
+- Uploaded clips and webcam capture are adapter boundaries only; the server rejects arbitrary paths and URLs and does not yet extract centroids from video.
 - Contracts have not received an external security review and must not hold production funds.
 
 ## Development roadmap
@@ -123,7 +132,7 @@ The deployment command has not been run against Monad. `DemoToken` has permissio
 - **M4 — Real-time Market Engine (local core complete):** test-token Next Omen markets, oracle validation, local repeated-cycle demo, and an unconfigured CRE boundary. Monad deployment remains pending.
 - **M5 — Live Chambers (functional local product complete):** Chamber discovery/detail/provenance, fixture media, local and configured contract market actions, Privy/viem/RPC boundaries, chat, reactions, health diagnostics, and explicit mode/error states.
 - **M6 — Battles & Chronicle (functional local product complete):** deterministic virtual PnL replay, onchain result commitments, The Pit, event-derived standings/history, and a generated/type-checked Envio indexing project. Hosted indexing remains pending deployment.
-- **M7 — Permissionless Chambers:** prototype guarded user-created creature rooms with constrained rulesets, source verification, anti-spam controls, and registration flows.
-- **M8 — Monad Showcase / Speed Mode:** create the hackathon demo mode with rapid repeated market cycles, concurrent predictions, Omen publication, settlement, and visible transaction/event activity to demonstrate why Monad matters.
+- **M7 — Permissionless Chambers (local and contract code complete; testnet pending):** constrained rulesets and source references, owner lifecycle, exact onchain ruleset allowlisting, per-owner limits, SQLite persistence, and local/Privy transaction paths.
+- **M8 — Monad Showcase / Speed Mode (local complete; testnet measurements pending):** configurable repeated cycles, two independent Chambers, concurrent prediction operations, event stream, and measured timings explicitly labeled local.
 
 Roadmap items may change after prototype testing, sponsor integration validation, animal-welfare review, and security review.

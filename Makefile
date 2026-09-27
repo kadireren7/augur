@@ -1,4 +1,4 @@
-.PHONY: install test test-python test-vision test-oracle test-contracts test-web test-indexer demo dev-web build-web lint format-check clean
+.PHONY: install test test-python test-vision test-oracle test-contracts test-web test-indexer demo dev-web dev-indexer build-web lint format-check clean
 
 install:
 	python3 -m pip install -e .
@@ -31,6 +31,9 @@ demo:
 
 dev-web:
 	cd web && pnpm dev
+
+dev-indexer:
+	cd indexer && pnpm dev
 
 build-web:
 	cd web && pnpm build
