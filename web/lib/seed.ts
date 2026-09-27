@@ -121,6 +121,9 @@ export function createSeed(now = new Date()): {
       asset: "MON / USD (fixture)",
       sourceMode: "FIXTURE",
       sourceLabel: "Deterministic centroid fixture — not live video",
+      ownerId: "augur-operator",
+      rulesetTemplate: "ZONE_STANDARD",
+      rulesetHash: currentProof.omenRulesetHash,
       latestOmen: currentOmen,
       activeMarket: emptyMarket(index + 1, `chamber-${configuration.slug}`, configuration.sequence + 1, now),
       observation: {

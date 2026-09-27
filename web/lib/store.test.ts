@@ -11,7 +11,7 @@ describe("AugurStore chamber lifecycle", () => {
     store.approve(market.id, "session-12345", 100);
     store.predict(market.id, "session-12345", "HOLD", 100, now);
     const chamber = store.advanceFixture("pablo", new Date(now.getTime() + 1_000));
-    expect(chamber.latestOmen.value).toBe("HOLD");
+    expect(chamber.latestOmen!.value).toBe("HOLD");
     expect(chamber.marketHistory[0].state).toBe("RESOLVED");
     const feedback = store.claim(market.id, "session-12345");
     expect(feedback.phase).toBe("CONFIRMED");

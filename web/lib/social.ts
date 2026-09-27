@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { SlidingWindowRateLimiter } from "@/lib/rate-limit";
+import type { ApplicationPersistence } from "@/lib/persistence";
 import type { ChatMessage, ReactionPulse, ReactionValue } from "@/lib/types";
 
 export const chatInputSchema = z.object({
@@ -35,12 +36,18 @@ export class SocialStore {
   private readonly chatLimiter = new SlidingWindowRateLimiter(5, 60_000);
   private readonly reactionLimiter = new SlidingWindowRateLimiter(12, 60_000);
 
+  constructor(private readonly persistence?: ApplicationPersistence) {}
+
   listMessages(chamberId: string): ChatMessage[] {
+    if (!this.messages.has(chamberId) && this.persistence) {
+      this.messages.set(chamberId, this.persistence.loadMessages(chamberId));
+    }
     return [...(this.messages.get(chamberId) ?? [])];
   }
 
   postMessage(input: unknown, now = Date.now()): ChatMessage {
     const value = chatInputSchema.parse(input);
+    this.listMessages(value.chamberId);
     const rate = this.chatLimiter.check(`${value.chamberId}:${value.sessionId}`, now);
     if (!rate.allowed) {
       throw new SocialError("RATE_LIMITED", "Chat rate limit exceeded", rate.retryAfterMs);
@@ -61,11 +68,13 @@ export class SocialStore {
     const current = this.messages.get(value.chamberId) ?? [];
     current.push(message);
     this.messages.set(value.chamberId, current.slice(-100));
+    this.persistence?.saveMessage(message);
     return message;
   }
 
   addReaction(input: unknown, now = Date.now()): ReactionPulse {
     const value = reactionInputSchema.parse(input);
+    this.getPulse(value.chamberId);
     const rate = this.reactionLimiter.check(`${value.chamberId}:${value.sessionId}`, now);
     if (!rate.allowed) {
       throw new SocialError("RATE_LIMITED", "Reaction rate limit exceeded", rate.retryAfterMs);
@@ -79,10 +88,21 @@ export class SocialStore {
     };
     counts[value.reaction] += 1;
     this.reactions.set(value.chamberId, counts);
+    this.persistence?.saveReaction(
+      value.chamberId,
+      value.sessionId,
+      value.reaction,
+      new Date(now).toISOString(),
+    );
     return this.getPulse(value.chamberId);
   }
 
   getPulse(chamberId: string): ReactionPulse {
+    if (!this.reactions.has(chamberId) && this.persistence) {
+      const persisted = { BUY: 0, HOLD: 0, SELL: 0, HYPE: 0, RIP: 0 };
+      for (const reaction of this.persistence.loadReactions(chamberId)) persisted[reaction] += 1;
+      this.reactions.set(chamberId, persisted);
+    }
     const counts = this.reactions.get(chamberId) ?? {
       BUY: 0,
       HOLD: 0,

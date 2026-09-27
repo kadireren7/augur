@@ -22,6 +22,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/">Chambers</Link>
               <Link href="/battles">The Pit</Link>
               <Link href="/chronicle">Chronicle</Link>
+              <Link href="/create">Create</Link>
+              <Link href="/showcase">Showcase</Link>
               <Link href="/health">Health</Link>
             </nav>
             <WalletStatus />

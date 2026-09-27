@@ -34,8 +34,8 @@ export default async function HomePage() {
             <dl className="facts">
               <div><dt>Source</dt><dd>{chamber.sourceMode}</dd></div>
               <div><dt>Asset</dt><dd>{chamber.asset}</dd></div>
-              <div><dt>Latest Omen</dt><dd className={`omen ${chamber.latestOmen.value.toLowerCase()}`}>{chamber.latestOmen.value}</dd></div>
-              <div><dt>Sequence</dt><dd>#{chamber.latestOmen.sequence}</dd></div>
+              <div><dt>Latest Omen</dt><dd className={`omen ${chamber.latestOmen?.value.toLowerCase() ?? ""}`}>{chamber.latestOmen?.value ?? "NONE"}</dd></div>
+              <div><dt>Sequence</dt><dd>{chamber.latestOmen ? `#${chamber.latestOmen.sequence}` : "—"}</dd></div>
               <div><dt>Market</dt><dd>{chamber.activeMarket?.state ?? "NONE"}</dd></div>
               <div><dt>Pool</dt><dd>{chamber.activeMarket?.totalPool ?? 0} AUGD</dd></div>
             </dl>

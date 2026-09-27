@@ -53,6 +53,52 @@ export const nextOmenMarketAbi = [
   },
 ] as const;
 
+export const creatureRegistryAbi = [
+  {
+    type: "function",
+    name: "registerCreature",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "creatureId", type: "bytes32" },
+      { name: "species", type: "uint8" },
+      { name: "metadataHash", type: "bytes32" },
+      { name: "operator", type: "address" },
+    ],
+    outputs: [],
+  },
+] as const;
+
+export const roomRegistryAbi = [
+  {
+    type: "function",
+    name: "permissionlessEnabled",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "allowedRuleset",
+    stateMutability: "view",
+    inputs: [{ name: "rulesetHash", type: "bytes32" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "registerPermissionlessRoom",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "chamberId", type: "bytes32" },
+      { name: "creatureId", type: "bytes32" },
+      { name: "configHash", type: "bytes32" },
+      { name: "rulesetHash", type: "bytes32" },
+      { name: "publisher", type: "address" },
+      { name: "sourceMode", type: "uint8" },
+    ],
+    outputs: [],
+  },
+] as const;
+
 const outcomeIndex: Record<OmenValue, number> = { SELL: 0, HOLD: 1, BUY: 2 };
 
 export interface ContractWallet {
@@ -65,7 +111,19 @@ export class AugurContractClient {
 
   get configured(): boolean {
     return Boolean(
-      this.config.expectedChainId && this.config.tokenAddress && this.config.marketAddress,
+      this.config.rpcUrl
+      && this.config.expectedChainId
+      && this.config.tokenAddress
+      && this.config.marketAddress,
+    );
+  }
+
+  get permissionlessConfigured(): boolean {
+    return Boolean(
+      this.config.expectedChainId
+      && this.config.rpcUrl
+      && this.config.creatureRegistryAddress
+      && this.config.roomRegistryAddress,
     );
   }
 
@@ -101,6 +159,69 @@ export class AugurContractClient {
     return this.send(wallet, this.config.marketAddress!, nextOmenMarketAbi, "refund", [marketId]);
   }
 
+  async registerCreature(
+    wallet: ContractWallet,
+    creatureId: `0x${string}`,
+    species: 0 | 1 | 2,
+    metadataHash: `0x${string}`,
+  ): Promise<Hash> {
+    if (!this.permissionlessConfigured) throw new Error("Registry contracts are not configured");
+    return this.send(
+      wallet,
+      this.config.creatureRegistryAddress!,
+      creatureRegistryAbi,
+      "registerCreature",
+      [creatureId, species, metadataHash, wallet.address],
+    );
+  }
+
+  async validatePermissionlessPolicy(rulesetHash: `0x${string}`): Promise<void> {
+    if (!this.permissionlessConfigured) throw new Error("Registry contracts are not configured");
+    const client = createPublicClient({ transport: http(this.config.rpcUrl!) });
+    const [enabled, rulesetAllowed] = await Promise.all([
+      client.readContract({
+        address: this.config.roomRegistryAddress!,
+        abi: roomRegistryAbi,
+        functionName: "permissionlessEnabled",
+      }),
+      client.readContract({
+        address: this.config.roomRegistryAddress!,
+        abi: roomRegistryAbi,
+        functionName: "allowedRuleset",
+        args: [rulesetHash],
+      }),
+    ]);
+    if (!enabled) throw new Error("Permissionless Chamber registration is disabled onchain");
+    if (!rulesetAllowed) throw new Error("This exact ruleset configuration is not allowlisted onchain");
+  }
+
+  async registerPermissionlessRoom(
+    wallet: ContractWallet,
+    registration: {
+      chamberId: `0x${string}`;
+      creatureId: `0x${string}`;
+      configHash: `0x${string}`;
+      rulesetHash: `0x${string}`;
+    },
+    sourceMode: 0 | 1 | 2,
+  ): Promise<Hash> {
+    if (!this.permissionlessConfigured) throw new Error("Registry contracts are not configured");
+    return this.send(
+      wallet,
+      this.config.roomRegistryAddress!,
+      roomRegistryAbi,
+      "registerPermissionlessRoom",
+      [
+        registration.chamberId,
+        registration.creatureId,
+        registration.configHash,
+        registration.rulesetHash,
+        wallet.address,
+        sourceMode,
+      ],
+    );
+  }
+
   private async send(
     wallet: ContractWallet,
     to: Address,
@@ -116,12 +237,9 @@ export class AugurContractClient {
     const walletClient = createWalletClient({ transport: custom(wallet.provider) });
     const data = encodeFunctionData({ abi, functionName, args });
     const hash = await walletClient.sendTransaction({ account: wallet.address, chain: null, to, data });
-    const rpcUrl = process.env.NEXT_PUBLIC_MONAD_RPC_URL;
-    if (rpcUrl) {
-      const publicClient = createPublicClient({ transport: http(rpcUrl) });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status !== "success") throw new Error("Transaction reverted");
-    }
+    const publicClient = createPublicClient({ transport: http(this.config.rpcUrl!) });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
+    if (receipt.status !== "success") throw new Error("Transaction reverted");
     return hash;
   }
 

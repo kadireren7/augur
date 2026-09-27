@@ -1,7 +1,7 @@
 export type Species = "Hamster" | "Fish" | "Turtle";
 export type OmenValue = "BUY" | "HOLD" | "SELL";
 export type SourceMode = "FIXTURE" | "REPLAY" | "LIVE";
-export type ChamberStatus = "ACTIVE" | "PAUSED" | "CLOSED";
+export type ChamberStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "CLOSED";
 export type MarketState = "OPEN" | "LOCKED" | "RESOLVED" | "CANCELLED";
 export type TransactionPhase = "IDLE" | "PENDING" | "CONFIRMED" | "FAILED" | "REJECTED";
 
@@ -104,17 +104,34 @@ export interface ChamberSummary {
   asset: string;
   sourceMode: SourceMode;
   sourceLabel: string;
-  latestOmen: OmenView;
+  ownerId: string;
+  rulesetTemplate: "ZONE_STANDARD" | "ZONE_INVERTED" | "DIRECTIONAL";
+  rulesetHash: string;
+  latestOmen: OmenView | null;
   activeMarket: MarketView | null;
 }
 
 export interface ChamberView extends ChamberSummary {
-  observation: ObservationView;
-  behavior: BehaviorView;
-  proof: ProofView;
+  observation: ObservationView | null;
+  behavior: BehaviorView | null;
+  proof: ProofView | null;
   omenHistory: OmenView[];
   marketHistory: MarketView[];
   fixtureFrame: { x: number; y: number; label: string };
+}
+
+export interface ChamberCreationInput {
+  name: string;
+  species: Species;
+  description?: string;
+  mediaReference: string;
+  sourceMode: "FIXTURE_REPLAY" | "UPLOADED_CLIP" | "LIVE_ADAPTER";
+  rulesetTemplate: ChamberSummary["rulesetTemplate"];
+  movementThreshold: number;
+  confidenceThreshold: number;
+  asset: string;
+  ownerId: string;
+  publisher: string;
 }
 
 export interface ChatMessage {
@@ -184,4 +201,26 @@ export interface TransactionFeedback {
   message: string;
   transactionHash?: `0x${string}`;
   mode: "LOCAL_DEMO" | "CONTRACT";
+}
+
+export interface ShowcaseEvent {
+  id: string;
+  chamberId: string;
+  round: number;
+  phase: "OPEN" | "PREDICTIONS" | "LOCK" | "OMEN" | "RESOLVE" | "NEXT_ROUND";
+  occurredAt: string;
+  detail: string;
+  localDurationMs?: number;
+}
+
+export interface ShowcaseState {
+  mode: "LOCAL" | "TESTNET";
+  running: boolean;
+  durationMs: number;
+  rounds: Record<string, number>;
+  operationsAttempted: number;
+  operationsSucceeded: number;
+  errors: number;
+  events: ShowcaseEvent[];
+  chambers: ChamberView[];
 }

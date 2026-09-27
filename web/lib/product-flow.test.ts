@@ -46,7 +46,7 @@ describe("local product flows", () => {
     expect(() =>
       store.predict(market.id, sessionId, "BUY", 10, new Date(market.locksAt)),
     ).toThrow(StoreError);
-    expect(store.getChamber("pablo").latestOmen.sequence).toBe(3);
+    expect(store.getChamber("pablo").latestOmen!.sequence).toBe(3);
     expect(market.state).toBe("OPEN");
   });
 });
