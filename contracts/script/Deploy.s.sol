@@ -9,8 +9,10 @@ import { OmenPublisher } from "../src/OmenPublisher.sol";
 import { RoomRegistry } from "../src/RoomRegistry.sol";
 
 interface VmDeploy {
-    function envUint(string calldata name) external view returns (uint256 value);
+    function envAddress(string calldata name) external view returns (address value);
+    function envOr(string calldata name, uint256 defaultValue) external view returns (uint256 value);
     function addr(uint256 privateKey) external pure returns (address keyAddr);
+    function startBroadcast(address signer) external;
     function startBroadcast(uint256 privateKey) external;
     function stopBroadcast() external;
 }
@@ -30,9 +32,15 @@ contract DeployAugur {
             BattleCoordinator battles
         )
     {
-        uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployer = vm.addr(deployerKey);
-        vm.startBroadcast(deployerKey);
+        uint256 deployerKey = vm.envOr("DEPLOYER_PRIVATE_KEY", uint256(0));
+        address deployer;
+        if (deployerKey == 0) {
+            deployer = vm.envAddress("DEPLOYER_ADDRESS");
+            vm.startBroadcast(deployer);
+        } else {
+            deployer = vm.addr(deployerKey);
+            vm.startBroadcast(deployerKey);
+        }
         creatures = new CreatureRegistry();
         rooms = new RoomRegistry(creatures);
         omens = new OmenPublisher(rooms, creatures);

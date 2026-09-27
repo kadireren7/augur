@@ -8,7 +8,9 @@ import { IOmenPublisher } from "../src/interfaces/IOmenPublisher.sol";
 interface VmSmokeResolve {
     function envAddress(string calldata name) external view returns (address value);
     function envBytes32(string calldata name) external view returns (bytes32 value);
+    function envOr(string calldata name, uint256 defaultValue) external view returns (uint256 value);
     function envUint(string calldata name) external view returns (uint256 value);
+    function startBroadcast(address signer) external;
     function startBroadcast(uint256 privateKey) external;
     function stopBroadcast() external;
 }
@@ -18,7 +20,7 @@ contract SmokeResolve {
         VmSmokeResolve(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     function run() external {
-        uint256 key = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        uint256 key = vm.envOr("DEPLOYER_PRIVATE_KEY", uint256(0));
         uint256 marketId = vm.envUint("SMOKE_MARKET_ID");
         bytes32 chamberId = vm.envBytes32("SMOKE_CHAMBER_ID");
         bytes32 creatureId = vm.envBytes32("SMOKE_CREATURE_ID");
@@ -26,7 +28,8 @@ contract SmokeResolve {
         OmenPublisher omens = OmenPublisher(vm.envAddress("OMEN_PUBLISHER_ADDRESS"));
         NextOmenMarket markets = NextOmenMarket(vm.envAddress("NEXT_OMEN_MARKET_ADDRESS"));
 
-        vm.startBroadcast(key);
+        if (key == 0) vm.startBroadcast(vm.envAddress("DEPLOYER_ADDRESS"));
+        else vm.startBroadcast(key);
         omens.publish(
             chamberId,
             creatureId,

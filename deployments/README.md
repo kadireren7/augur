@@ -19,6 +19,8 @@ NEXT_OMEN_MARKET_ADDRESS
 BATTLE_COORDINATOR_ADDRESS
 ```
 
+For a local Anvil RPC only, omit `DEPLOYER_PRIVATE_KEY`, set `DEPLOYER_ADDRESS` to an unlocked test account, and add `--unlocked --sender "$DEPLOYER_ADDRESS"` to broadcast commands. Never use unlocked mode for a public network.
+
 Deployment and verification:
 
 ```sh
