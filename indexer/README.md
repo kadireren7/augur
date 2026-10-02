@@ -1,8 +1,8 @@
 # Augur Envio indexer
 
-This is a real HyperIndex event projection for the Augur contracts. The committed `config.yaml` is intentionally local-only: its addresses are the deterministic output of `DeployAugur` on a fresh Anvil chain, not a Monad deployment.
+This is a real HyperIndex event projection for the Augur contracts. The committed `config.yaml` targets the verified Monad testnet deployment on chain 10143, starting from the first contract deployment block.
 
-After deploying contracts, replace the chain ID, start block, RPC, and addresses; set `ENVIO_API_TOKEN` in an untracked `.env`; then run:
+Set `ENVIO_API_TOKEN` in an untracked `.env` when required by the selected Envio runtime, then run:
 
 ```sh
 pnpm install
@@ -11,6 +11,6 @@ pnpm typecheck
 pnpm dev
 ```
 
-`pnpm dev` also requires Docker. No hosted indexer or Monad deployment is claimed by this scaffold.
+`pnpm dev` also requires Docker. The contracts are deployed and smoke-verified on Monad testnet; a hosted Envio endpoint is not claimed here.
 
 The schema supports Chamber timelines/current Omens, active and recent markets, prediction and claim history, aggregate volume, battle history, and Chronicle standings derived by the application query layer.

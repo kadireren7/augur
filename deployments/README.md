@@ -1,8 +1,8 @@
 # Deployment metadata
 
-No Monad deployment has been performed from this repository.
+The Augur contract stack is deployed on Monad testnet chain 10143. `monad-testnet-10143-67521320.json` records only public addresses, deployment blocks, and deployment/smoke transaction hashes. `VerifyDeployment.s.sol` and the complete setup-to-claim smoke flow passed against this deployment.
 
-After a real deployment, add a non-secret JSON file named for the network and deployment block. Record only the chain ID, deployer address, block number, transaction hashes, contract addresses, source revision, and verification result. Never store a private key, seed phrase, RPC credential, or API token here.
+For future deployments, add a non-secret JSON file named for the network and first deployment block. Record only public chain IDs, addresses, block numbers, and transaction hashes. Never store a private key, seed phrase, RPC credential, or API token here.
 
 Required runtime variables:
 

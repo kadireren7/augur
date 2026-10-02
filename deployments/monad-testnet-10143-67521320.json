@@ -1,0 +1,48 @@
+{
+  "chainId": 10143,
+  "contracts": {
+    "CreatureRegistry": {
+      "address": "0xD3174bB874328551890d3D22295D98158f5e6a80",
+      "deploymentBlock": 67521320,
+      "transactionHash": "0x3195113d91907d1282995034f2ab3e5f06339d69935b86cd288c5b64c32d003e"
+    },
+    "RoomRegistry": {
+      "address": "0x96606Dca5315835B3b16b80fa411e3Fac1F8eb39",
+      "deploymentBlock": 67521327,
+      "transactionHash": "0x05d302ae775714cf8dcf0907787904d5e942b40c923b9f729a6cea1ec82564c2"
+    },
+    "OmenPublisher": {
+      "address": "0x333c7ba28b6Eec62f51d111d161fc52fd3ADAa1a",
+      "deploymentBlock": 67521334,
+      "transactionHash": "0x1dc513874bf4e1854daf5a3aac112d463811fc407f3c6d908858a56aa2e61a3e"
+    },
+    "DemoToken": {
+      "address": "0xFF35f01886B83D1782e1170c33D3A11E75b0e90e",
+      "deploymentBlock": 67521336,
+      "transactionHash": "0x9daba7e6b6cd2e798b33c51e53798eb13b0862409634c89b2626e761568d370e"
+    },
+    "NextOmenMarket": {
+      "address": "0x334761518FAD86f9cddDbE16a42CFb9316fD4D9E",
+      "deploymentBlock": 67521340,
+      "transactionHash": "0x971c6d09bc5cb3e2dbe2d31c449c453691708da17663fca05ebfc2bab5a94ad3"
+    },
+    "BattleCoordinator": {
+      "address": "0xc2AbAFd7ef67592B1efC6A2Ef48B64E3AaB9743f",
+      "deploymentBlock": 67521347,
+      "transactionHash": "0x9f6b9f98a579a3fd41e7a32b6bcbe52ff0d0360dda192061431d82f124a6b29d"
+    }
+  },
+  "smokeTransactionHashes": {
+    "registerCreature": "0xdf637965ee1ff4ab949476d34509bf8e738d74cb35fcb14623cb25f03bcbfbd7",
+    "registerChamber": "0x2acb152bb8ff33b0fffb5b9fe8691f4969f3dd4aee4e7602de8af87877fa9f0c",
+    "activateChamber": "0xf870f56a153556574fb485d70f1877e0789773b75fb44bf000c7b7574f0f7222",
+    "mintDemoToken": "0xa5fbc36cc1495579be622905337231ac91794568b27af924ea6d51e15a3568a5",
+    "approveDemoToken": "0x21b822cbb819a95cc4e6acf054426f352bbbf9899af6b80e5df74fe79cdf92bd",
+    "openMarket": "0x1a443fed5c276cc3465303db963287bb855d6ee867231787c937b21696324f13",
+    "placePrediction": "0x0fc01842ab95d1f2904f8563fe50600ba1ba382c29913ad50c35a887795de101",
+    "publishOmen": "0x33f06edf100af899c93793be208b8b6fdd38113fcb5decc430b4e2f541b10ef9",
+    "lockMarket": "0x58e22cfed85d61ab07bfe6792a46b69d0773b0915f649cf931cf6decee497e24",
+    "resolveMarket": "0x7387e33d21692ce3cec47dc32cd7b7efc5a249b1d59ae0f8468c48e95b0df36d",
+    "claim": "0xc0d45120034b114668c9f9349ef1cb1ce775dd7ee29823e6920cc5fe64bbe738"
+  }
+}

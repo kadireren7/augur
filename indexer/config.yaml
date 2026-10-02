@@ -1,6 +1,6 @@
-# Local Anvil configuration for the deterministic DeployAugur address set. Replace it after deployment.
+# Verified Monad testnet deployment. Public RPC only; no credentials belong in this file.
 # yaml-language-server: $schema=./node_modules/envio/evm.schema.json
-name: augur-local-indexer
+name: augur-monad-testnet-indexer
 description: Augur protocol, market, and battle event projections
 contracts:
   - name: CreatureRegistry
@@ -34,19 +34,19 @@ contracts:
       - event: "BattleResolved(bytes32 indexed battleId, uint8 result, int256 pnlA, int256 pnlB, bytes32 priceSeriesHash, bytes32 resolutionHash)"
       - event: "BattleCancelled(bytes32 indexed battleId, bytes32 indexed reason, uint64 cancelledAt)"
 chains:
-  - id: 31337
-    start_block: 0
+  - id: 10143
+    start_block: 67521320
     rpc:
-      - url: http://127.0.0.1:8545
+      - url: https://testnet-rpc.monad.xyz
         for: sync
     contracts:
       - name: CreatureRegistry
-        address: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+        address: "0xD3174bB874328551890d3D22295D98158f5e6a80"
       - name: RoomRegistry
-        address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+        address: "0x96606Dca5315835B3b16b80fa411e3Fac1F8eb39"
       - name: OmenPublisher
-        address: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+        address: "0x333c7ba28b6Eec62f51d111d161fc52fd3ADAa1a"
       - name: NextOmenMarket
-        address: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
+        address: "0x334761518FAD86f9cddDbE16a42CFb9316fD4D9E"
       - name: BattleCoordinator
-        address: "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"
+        address: "0xc2AbAFd7ef67592B1efC6A2Ef48B64E3AaB9743f"
