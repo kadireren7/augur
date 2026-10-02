@@ -56,7 +56,7 @@ Augur is separated into five modules:
 - `indexer/` contains the Envio schema, local code-generation configuration, and typed event projections.
 - `web/` contains the functional Next.js product layer and its local/contract/indexed data boundaries.
 
-Privy's SDK path and typed transaction signing boundary are implemented, but no app ID has been configured. Monad RPC chain, receipt, bytecode, dependency, and role checks passed against the testnet deployment. Envio code generation and typechecking pass against the committed Monad configuration; local Envio indexed the real Monad testnet smoke data, GraphQL returned the expected entities and resolved BUY outcome, and the web indexed-data adapter consumed that live GraphQL result. No hosted indexer is running. The CRE adapter enforces workflow/version, Chamber, sequence, provenance, replay, and timeout binding, but no real CRE client or workflow execution is claimed.
+Privy's SDK path and typed transaction signing boundary are implemented, but no app ID has been configured. The server-side Alchemy Monad RPC path is verified against chain 10143 for block, bytecode, contract read, receipt, and event-log queries; health diagnostics report the active provider and fall back only to `MONAD_RPC_URL` when Alchemy is unavailable. Envio code generation and typechecking pass against the committed Monad configuration; local Envio indexed the real Monad testnet smoke data, GraphQL returned the expected entities and resolved BUY outcome, and the web indexed-data adapter consumed that live GraphQL result. No hosted indexer is running. The CRE adapter enforces workflow/version, Chamber, sequence, provenance, replay, and timeout binding, but no real CRE client or workflow execution is claimed.
 
 ## Milestone status
 
@@ -114,7 +114,7 @@ Use `VerifyDeployment.s.sol` to recheck deployment wiring, then use `SmokeSetup.
 
 - Vision consumes controlled JSON centroid trajectories; it does not yet extract centroids from arbitrary video.
 - Python E2E uses the local publisher and market model; Monad smoke verification covers the real Solidity registry-to-claim lifecycle, while the indexed web read path has been exercised locally.
-- Privy requires a real app ID; no authenticated session was exercised. Alchemy requires a Monad RPC endpoint; no external RPC health check was exercised.
+- Privy requires a real app ID; no authenticated session was exercised. The configured server-only Alchemy Monad RPC and generic Monad fallback health paths were exercised without exposing either endpoint to the browser bundle.
 - Envio was exercised locally with Docker and Anvil, and its Monad configuration passes code generation/typechecking; no hosted endpoint is running.
 - The CRE adapter validates response binding, but no real CRE SDK transport or workflow execution was available.
 - Only Next Omen is implemented as a market. Profitability and battle markets remain planned.

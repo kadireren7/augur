@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { getPublicConfig } from "@/lib/config";
 import { getPersistence } from "@/lib/database";
 import { checkEnvioHealth } from "@/lib/envio-health";
 import { checkRpcHealth } from "@/lib/rpc";
+import { getServerConfig } from "@/lib/server-config";
 import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const config = getPublicConfig();
+  const config = getServerConfig();
   const store = getStore();
   const [rpc, envio] = await Promise.all([checkRpcHealth(), checkEnvioHealth()]);
   return NextResponse.json({

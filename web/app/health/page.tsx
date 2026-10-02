@@ -1,7 +1,7 @@
-import { getPublicConfig } from "@/lib/config";
 import { getPersistence } from "@/lib/database";
 import { checkEnvioHealth } from "@/lib/envio-health";
 import { checkRpcHealth } from "@/lib/rpc";
+import { getServerConfig } from "@/lib/server-config";
 import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function HealthPage() {
   const rpc = await checkRpcHealth();
   const envio = await checkEnvioHealth();
-  const config = getPublicConfig();
+  const config = getServerConfig();
   const rows = [
     ["Web", "HEALTHY"],
     ["Data source", process.env.ENVIO_GRAPHQL_URL ? "ENVIO" : "LOCAL"],
