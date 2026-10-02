@@ -11,6 +11,6 @@ pnpm typecheck
 pnpm dev
 ```
 
-`pnpm dev` also requires Docker. The contracts are deployed and smoke-verified on Monad testnet; a hosted Envio endpoint is not claimed here.
+`pnpm dev` also requires Docker. Local Envio indexing against the real Monad testnet deployment has been verified from start block 67,521,320. The indexed smoke lifecycle contains `CreatureRegistered`, Chamber registration and activation, `OmenPublished` sequence 1, `MarketOpened`, `PredictionPlaced`, `MarketLocked`, `MarketResolved` with BUY, and `Claimed`. GraphQL returned those real entities and the web indexed-data adapter consumed the result successfully. A hosted Envio endpoint is not claimed here.
 
 The schema supports Chamber timelines/current Omens, active and recent markets, prediction and claim history, aggregate volume, battle history, and Chronicle standings derived by the application query layer.

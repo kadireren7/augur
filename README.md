@@ -2,7 +2,7 @@
 
 Augur is a hackathon project that turns observable animal behavior into verifiable onchain events and short, real-time prediction markets on Monad. A live creature room is a **Chamber**; a detected physical action becomes a **Behavior**; and a ruleset can map that behavior into an **Omen** such as BUY, HOLD, or SELL.
 
-Augur has a tested local **M1–M8 product**: deterministic fixture-based vision, Proof of Omen provenance, EVM-compatible protocol and market contracts, an idempotent oracle bridge, Live Chambers, persistent social features, deterministic creature battles, Chronicle, guarded Chamber creation, and a concurrent speed showcase. The full contract-to-Envio-to-web read path has been verified on Anvil. All six contracts are deployed and bytecode/wiring/smoke-verified on Monad testnet chain 10143; credentialed sponsor services remain unconfigured.
+Augur has a tested local **M1–M8 product**: deterministic fixture-based vision, Proof of Omen provenance, EVM-compatible protocol and market contracts, an idempotent oracle bridge, Live Chambers, persistent social features, deterministic creature battles, Chronicle, guarded Chamber creation, and a concurrent speed showcase. All six contracts are deployed and bytecode/wiring/smoke-verified on Monad testnet chain 10143, and the real smoke lifecycle has been indexed through Envio and consumed by the web indexed-data adapter; credentialed sponsor services remain unconfigured.
 
 ## Problem and concept
 
@@ -37,7 +37,7 @@ Implemented and tested locally:
 - Guarded Chamber creation with wallet ownership, exact ruleset allowlisting, bounded metadata and thresholds, safe source references, lifecycle controls, and per-owner limits.
 - SQLite persistence for created Chambers, chat, and reactions; protocol and market truth remains onchain/indexed.
 - A `/showcase` harness for independent repeated cycles across two Chambers, measured local timings, and bounded prediction-load tests.
-- Deployment verification and the full split smoke lifecycle have passed on Monad testnet, including registry, Chamber authorization, publication, market resolution, and claim; local Envio indexing remains the exercised runtime path.
+- Deployment verification and the full split smoke lifecycle have passed on Monad testnet. Local Envio indexing against chain 10143 verified `CreatureRegistered`, Chamber registration and activation, `OmenPublished`, `MarketOpened`, `PredictionPlaced`, `MarketLocked`, `MarketResolved`, and `Claimed` from the real deployment.
 
 Still pending external configuration or later work:
 
@@ -56,11 +56,11 @@ Augur is separated into five modules:
 - `indexer/` contains the Envio schema, local code-generation configuration, and typed event projections.
 - `web/` contains the functional Next.js product layer and its local/contract/indexed data boundaries.
 
-Privy's SDK path and typed transaction signing boundary are implemented, but no app ID has been configured. Monad RPC chain, receipt, bytecode, dependency, and role checks passed against the testnet deployment. Envio code generation and typechecking pass against the committed Monad configuration; local indexing, GraphQL queries, and the indexed web source were exercised on Anvil, but no hosted indexer is running. The CRE adapter enforces workflow/version, Chamber, sequence, provenance, replay, and timeout binding, but no real CRE client or workflow execution is claimed.
+Privy's SDK path and typed transaction signing boundary are implemented, but no app ID has been configured. Monad RPC chain, receipt, bytecode, dependency, and role checks passed against the testnet deployment. Envio code generation and typechecking pass against the committed Monad configuration; local Envio indexed the real Monad testnet smoke data, GraphQL returned the expected entities and resolved BUY outcome, and the web indexed-data adapter consumed that live GraphQL result. No hosted indexer is running. The CRE adapter enforces workflow/version, Chamber, sequence, provenance, replay, and timeout binding, but no real CRE client or workflow execution is claimed.
 
 ## Milestone status
 
-**Current: M7 and M8 are locally implemented and tested; the contract stack is deployed and smoke-verified on Monad testnet.** User-created Chambers and social data persist in SQLite, contract mode uses guarded registry policy, and speed mode runs repeated independent Chamber cycles. Envio roundtrips work on Anvil, and Envio code generation/typechecking pass for the Monad deployment. Credentialed Privy login, a hosted Envio endpoint, real CRE execution, live media ingestion, and testnet permissionless/speed-mode exercises remain outstanding.
+**Current: M7 and M8 are locally implemented and tested; the contract stack is deployed, smoke-verified, and locally indexed with Envio on Monad testnet.** User-created Chambers and social data persist in SQLite, contract mode uses guarded registry policy, and speed mode runs repeated independent Chamber cycles. The real Monad GraphQL-to-web indexed-data path passed. Credentialed Privy login, a hosted Envio endpoint, real CRE execution, live media ingestion, and testnet permissionless/speed-mode exercises remain outstanding.
 
 ## Developer workflow
 

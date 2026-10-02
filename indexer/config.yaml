@@ -39,6 +39,10 @@ chains:
     rpc:
       - url: https://testnet-rpc.monad.xyz
         for: sync
+        # Monad's public testnet RPC caps eth_getLogs queries at 100 blocks.
+        initial_block_interval: 100
+        interval_ceiling: 100
+        acceleration_additive: 0
     contracts:
       - name: CreatureRegistry
         address: "0xD3174bB874328551890d3D22295D98158f5e6a80"
