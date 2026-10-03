@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import type { ApplicationPersistence } from "@/lib/persistence";
-import type { ChamberView, ChatMessage, ReactionValue } from "@/lib/types";
+import type { LocalChamberView as ChamberView, ChatMessage, ReactionValue } from "@/lib/types";
 
 export class SqlitePersistence implements ApplicationPersistence {
   private readonly database: DatabaseSync;

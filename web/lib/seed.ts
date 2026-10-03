@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 
 import type {
   BattleView,
-  ChamberView,
+  LocalChamberView as ChamberView,
   Creature,
-  MarketView,
+  LocalMarketView as MarketView,
   OmenValue,
   ProofView,
 } from "@/lib/types";

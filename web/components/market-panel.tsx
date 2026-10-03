@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { formatAugd } from "@/lib/token-amount";
 import { useSession } from "@/components/providers";
 import { AugurContractClient } from "@/lib/contracts";
 import { executeApprovalClick } from "@/lib/market-actions";
@@ -207,7 +208,7 @@ export function MarketPanel({ market, onChanged }: { market: MarketView | null; 
         <span>State: <strong>{market.state}</strong></span>
         <span>Countdown: <strong>{countdown}</strong></span>
         <span>Locks: <time>{new Date(market.locksAt).toLocaleTimeString()}</time></span>
-        <span>Total: <strong>{market.totalPool} AUGD</strong></span>
+        <span>Total: <strong>{formatAugd(market.totalPool)} AUGD</strong></span>
       </div>
       <div className="outcome-grid">
         {outcomes.map((value) => (
@@ -219,7 +220,7 @@ export function MarketPanel({ market, onChanged }: { market: MarketView | null; 
             onClick={() => setOutcome(value)}
             type="button"
           >
-            <strong>{value}</strong><span>{market.pools[value]} AUGD</span>
+            <strong>{value}</strong><span>{formatAugd(market.pools[value])} AUGD</span>
           </button>
         ))}
       </div>

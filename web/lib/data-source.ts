@@ -106,14 +106,17 @@ export class EnvioDataSource implements AugurDataSource {
       battleTies: numeric(value.battleTies), virtualPnlMicros: numeric(value.virtualPnl),
       omenCounts: { BUY: numeric(value.omenBuy), HOLD: numeric(value.omenHold), SELL: numeric(value.omenSell) },
       totalBacked: snapshot.Chamber.filter((room) => room.creatureId === value.id)
-        .reduce((sum, room) => sum + numeric(room.volume), 0),
+        .reduce((sum, room) => sum + BigInt(room.volume), 0n).toString(),
     })).sort((left, right) => right.battleWins - left.battleWins || right.virtualPnlMicros - left.virtualPnlMicros);
     return {
       standings,
       battles,
       recentMarkets: chambers.flatMap((chamber) => chamber.marketHistory).slice(0, 20),
       mostActiveChamber: [...snapshot.Chamber].sort((a, b) => numeric(b.omenCount) - numeric(a.omenCount))[0]?.id ?? null,
-      mostBackedCreature: [...standings].sort((a, b) => b.totalBacked - a.totalBacked)[0]?.creature.name ?? null,
+      mostBackedCreature: [...standings].sort((a, b) => {
+        const left = BigInt(a.totalBacked), right = BigInt(b.totalBacked);
+        return left === right ? 0 : left > right ? -1 : 1;
+      })[0]?.creature.name ?? null,
       disclaimer: "Indexed creature performance is virtual PnL from declared scoring commitments, not financial advice or predictive accuracy.",
     };
   }
@@ -162,10 +165,10 @@ export class EnvioDataSource implements AugurDataSource {
   }
 
   private market(value: IndexedMarket, predictions: IndexedPrediction[]): MarketView {
-    const pools = { BUY: 0, HOLD: 0, SELL: 0 };
+    const totals = { BUY: 0n, HOLD: 0n, SELL: 0n };
     for (const prediction of predictions.filter((entry) => entry.marketId === value.id)) {
       const outcome = omenValues[prediction.outcome];
-      if (outcome) pools[outcome] += numeric(prediction.amount);
+      if (outcome) totals[outcome] += BigInt(prediction.amount);
     }
     return {
       id: numeric(value.id), chamberId: value.chamberId,
@@ -175,7 +178,8 @@ export class EnvioDataSource implements AugurDataSource {
       minOmenSequence: numeric(value.minOmenSequence),
       resolvingSequence: value.resolvingSequence === undefined ? undefined : numeric(value.resolvingSequence),
       winningOutcome: value.winningOutcome === undefined ? undefined : omenValues[value.winningOutcome],
-      pools, totalPool: numeric(value.volume), positions: {},
+      pools: { BUY: totals.BUY.toString(), HOLD: totals.HOLD.toString(), SELL: totals.SELL.toString() },
+      totalPool: value.volume, positions: {},
       cancellationReason: value.cancellationReason, mode: "CONTRACT",
     };
   }

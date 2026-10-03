@@ -5,8 +5,8 @@ import { getPersistence } from "@/lib/database";
 import type { ApplicationPersistence } from "@/lib/persistence";
 import type {
   BattleView,
-  ChamberView,
-  MarketView,
+  LocalChamberView as ChamberView,
+  LocalMarketView as MarketView,
   OmenValue,
   TransactionFeedback,
   UserMarketPosition,

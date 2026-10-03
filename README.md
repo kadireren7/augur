@@ -103,7 +103,7 @@ NEXT_PUBLIC_PRIVY_LOCAL_MODE=true pnpm dev
 
 Open `http://localhost:3000`. This local command does not sign blockchain transactions. It assumes `ENVIO_GRAPHQL_URL` is unset; an existing configured endpoint continues to select indexed reads.
 
-For the verified wallet and testnet setup, use ignored environment files: root `.env` for shell tools and `web/.env.local` for Next.js. Start from the corresponding `.env.example` without overwriting an existing configuration. Next.js does not automatically load the repository-root `.env` from `web/`; export it in your shell when using that file.
+For the verified wallet and testnet setup, use ignored environment files: root `.env` for shell tools and `web/.env.local` for Next.js. Start from the corresponding `.env.example` without overwriting an existing configuration. The demo commands below load the ignored root environment automatically; shell exports and web production-local files take precedence.
 
 | Configuration | Purpose |
 | --- | --- |
@@ -119,11 +119,24 @@ For the verified wallet and testnet setup, use ignored environment files: root `
 Keep server RPC credentials and signing keys out of `NEXT_PUBLIC_*`. Remove explicit local wallet mode to use Privy. A missing Privy configuration produces an unavailable state rather than fake authentication.
 
 ```bash
-# Production web build; load your intended environment first
+# Production demo: verify real Envio configuration before build and start
 cd web
-pnpm build
-pnpm start
+pnpm demo:build
+PORT=3007 pnpm demo:start
 ```
+
+Open `http://localhost:3007`. The demo path selects `ENVIO_GRAPHQL_URL`, defaulting
+only to the existing local Envio service at `http://localhost:8080/v1/graphql`.
+It checks chain 10143 and the real deployed Chamber before launching and stops if
+the indexer is unavailable. There is no fixture fallback. Ordinary `pnpm start`
+still uses standard Next.js environment loading; use `demo:start` for the demo.
+Rebuild when public wallet or browser RPC configuration changes.
+
+On the final origin, manually log in with Privy, confirm the wallet and chain
+10143 badge, and check disconnect/reconnect and transaction controls. If Privy
+reports an origin restriction, add that exact origin to the application's allowed
+origins in the Privy dashboard. This repository cannot verify that dashboard
+setting or complete authentication on the user's behalf.
 
 ## Verify
 
@@ -154,8 +167,8 @@ The visual system uses shared CSS tokens, lightweight SVGs, and CSS transitions 
 
 ## Current boundaries
 
-See the [final submission audit](docs/SUBMISSION-AUDIT.md) for the live-data checks
-and remaining indexed amount, mobile layout, and media-control presentation issues.
+See the [final submission audit](docs/SUBMISSION-AUDIT.md) for the resolved
+presentation blockers and the remaining manual final-origin wallet check.
 
 - Camera extraction and live animal streaming are not implemented; controlled trajectory fixtures are labeled.
 - Only Next Omen markets are implemented. Battle scores are virtual PnL, not animal-managed funds or a battle betting market.

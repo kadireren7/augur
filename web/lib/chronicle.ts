@@ -6,7 +6,7 @@ const emptyCounts = (): PoolTotals => ({ BUY: 0, HOLD: 0, SELL: 0 });
 export function buildChronicle(store: AugurStore): ChronicleView {
   const chambers = store.listChambers();
   const battles = [...store.battles.values()];
-  const standings = new Map<string, CreatureStanding>();
+  const standings = new Map<string, CreatureStanding & { totalBacked: number }>();
   for (const chamber of chambers) {
     const omenCounts = emptyCounts();
     for (const omen of chamber.omenHistory) omenCounts[omen.value] += 1;

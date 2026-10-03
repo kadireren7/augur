@@ -246,3 +246,17 @@ tbody tr:hover { background: #d7bb8006; }
 @media (max-width: 1100px) { .site-header { flex-wrap: wrap; gap: 16px; } nav { gap: 18px; } .site-header > .wallet-row { margin-left: auto; } .hero { gap: 25px; } .integration-strip { gap: 15px; } .site-footer { margin-inline: 32px; } }
 @media (max-width: 820px) { .site-header { padding: 16px 22px; } nav { order: 3; flex-basis: 100%; } .site-header > .mode-badge { margin-left: auto; max-width: 65%; white-space: normal; } .page-shell { padding: 32px 20px 60px; } .hero { grid-template-columns: 1fr; padding: 22px 0 40px; gap: 36px; } .hero-oracle { max-width: 480px; width: 100%; margin: auto; } .hero h1 { font-size: clamp(48px, 10vw, 76px); } .integration-strip { grid-template-columns: repeat(3, 1fr); row-gap: 24px; } .card-grid, .chamber-layout, .two-column { grid-template-columns: 1fr; } .signal-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } .signal { padding: 14px 10px; } .signal strong { font-size: 15px; } .omen-card strong { font-size: 25px; } .trust-section { grid-template-columns: 1fr; gap: 25px; padding: 40px 0; } .closing-grid { grid-template-columns: 1fr; } .controls { flex-wrap: wrap; } .history-row { flex-wrap: wrap; gap: 8px; } .panel-heading { flex-wrap: wrap; } .site-footer { margin-inline: 20px; } .site-footer > span:first-of-type { flex-basis: 70%; } .chambers-section { padding: 42px 0; } .fixture-box { height: 260px; } aside { position: static; } .proof-grid div { flex-wrap: wrap; } .proof-grid dd { text-align: left; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* Indexed identifiers must wrap within their panels; tables scroll locally. */
+.page-heading > div, .two-column > *, .card-grid > *, .panel-heading > *, .signal-row > * { min-width: 0; }
+.page-heading p, .panel p, .history-row, .mode-badge { overflow-wrap: anywhere; }
+.page-heading .mode-stack { flex-shrink: 0; }
+.table-wrap { width: 100%; min-width: 0; max-width: 100%; }
+.proof-grid dd { max-width: 100%; }
+@media (max-width: 820px) {
+  .page-heading > div { max-width: 100%; }
+  .panel-heading .mode-badge, .mode-stack .mode-badge { white-space: normal; }
+  .market-meta { min-width: 0; }
+  .market-meta > span { overflow-wrap: anywhere; }
+  .site-header nav a { white-space: nowrap; }
+}

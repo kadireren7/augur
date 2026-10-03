@@ -1,4 +1,4 @@
-import type { ChamberView, ChatMessage, ReactionValue } from "@/lib/types";
+import type { LocalChamberView as ChamberView, ChatMessage, ReactionValue } from "@/lib/types";
 
 export interface ApplicationPersistence {
   loadChambers(): ChamberView[];

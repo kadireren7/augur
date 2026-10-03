@@ -1,64 +1,82 @@
 # Submission audit
 
-The polished production build was checked against the existing Monad Testnet
-deployment, the running local Envio GraphQL service, Alchemy, and the configured
-Privy provider. This audit did not send a blockchain transaction.
+All code and configuration blockers from the presentation audit are resolved.
+The production demo was verified against real Monad Testnet, local Envio indexing,
+Alchemy, and the configured Privy provider. No blockchain transaction was sent
+during this pass. The final authenticated Privy session check remains manual.
 
-## Verified
+## Resolved blockers
 
-- Monad chain ID is 10143. All six configured contract addresses match the
-  committed deployment metadata, and all six bytecode checks pass.
-- Health reports ALCHEMY and HEALTHY. An isolated diagnostic RPC returning chain
-  1 produces CHAIN_MISMATCH without falling back to the generic Monad provider.
-- The existing Envio service returns the real Chamber, BUY Omen sequence 1,
-  resolved BUY market 1, and open market 2. Its chain metadata reported processed
-  block 67850107 against head 67850108 during the audit.
-- The indexed Chamber uses Contract mode and displays the real Omen and market
-  history. Approval and prediction state remain separate; the existing dedicated
-  approval regression test checks exactly one DemoToken send and no market send.
-- A deliberately unreachable indexer returns an explicit request error. It does
-  not substitute local Chambers. Fixture advancement in Envio mode returns 409.
-- All eight requested routes return HTTP 200 at desktop and mobile sizes. The
-  proof route explicitly explains that the full offchain manifest is unavailable.
-- Privy initialization reaches Connect with Privy, and the real login form and
-  wallet connection choice render. A fresh browser context has no authenticated
-  wallet; this audit does not claim a new completed login or signature.
-- All 18 README relative references resolve. Ten PNGs and the animated Showcase
-  GIF decode successfully. The screenshots remain explicitly local-data captures.
-- All 41 web tests, TypeScript, ESLint, production build, and diff checks pass.
+| Blocker | Resolution and evidence |
+| --- | --- |
+| Demo startup selects local data unless manually overridden | `pnpm demo:build` and `pnpm demo:start` load ignored environment files, select the configured Envio endpoint or the existing local endpoint, and require chain 10143 plus the real indexed Chamber before launching. The actual demo process reports ENVIO. An unreachable endpoint stops startup with exit 1. |
+| Raw token amounts displayed as AUGD | Indexed amounts remain exact base-unit strings. Prediction and backing totals use BigInt; the shared formatter uses all 18 decimals. The real smoke volume `10000000000000000000` renders as `10 AUGD`. Single-wei and large-number regression tests pass. Local fixtures retain whole-token amounts. |
+| Mobile document overflow | Long identifiers and panel content wrap; the Chronicle table scrolls within its panel. All eight routes have no horizontal document overflow at 1440, 390 and 430 pixels. |
+| Fixture controls on indexed Chamber | ENVIO/Contract views omit the fixture stage, synthetic centroid and advance button. They explain that media is unavailable. Explicit local mode retains its fixture controls; backend validation is unchanged. |
+| Missing full provenance manifest | Chamber and Proof views display the real Omen, sequence, timestamp, Chamber/creature IDs, ruleset and provenance commitments. The unavailable full manifest is stated explicitly, with no source/detection integrity claim or fabricated evidence. |
 
-## Remaining submission issues
+## Integration checks
 
-The root environment currently has no `ENVIO_GRAPHQL_URL`. The audit explicitly
-selected the already-running `http://localhost:8080/v1/graphql` service for its
-separate production instance. Set the intended GraphQL endpoint in the actual
-demo process environment before starting it; otherwise discovery uses local data.
+- Runtime health reports ENVIO, ALCHEMY / HEALTHY, Monad chain 10143, and bytecode
+  at all six configured contracts. Addresses match committed deployment metadata.
+- Envio serves the real Chamber, BUY Omen sequence 1, resolved BUY market 1 and
+  open market 2. The indexed API preserves raw token amounts as JSON strings.
+- Approval and prediction state remain separate. The existing approval regression
+  test still requires exactly one DemoToken transaction and no market transaction.
+- An unreachable configured indexer displays an explicit data-unavailable view.
+  Fixture data is never substituted. An unavailable endpoint prevents demo startup.
+- The earlier isolated wrong-chain RPC audit returned CHAIN_MISMATCH without
+  hiding the mismatch behind fallback; the existing regression test still passes.
+- No contract, wallet signer, oracle, Envio schema or CRE workflow logic changed.
+  Battles and Showcase retain their explicit local-data boundaries.
 
-The indexed adapter currently displays raw token base units as AUGD in Chronicle
-and historical market volume. DemoToken has 18 decimals: the smoke amount
-`10000000000000000000` represents **10 AUGD**, not that many whole tokens. Unit
-formatting requires a focused adapter/presentation correction outside this
-copy-only audit.
+## Validation
 
-At 390 pixels wide, the real indexed Chamber and Chronicle overflow horizontally
-because real identifiers and amounts are longer than the fixture values. The
-desktop routes remain readable. The layout needs a focused responsive correction.
+- All 45 web tests pass, including exact amount formatting, indexed aggregation,
+  serialization and explicit indexer-failure regressions.
+- TypeScript typecheck and ESLint pass.
+- The production build passes through `pnpm demo:build` after real Envio preflight.
+- Browser checks cover discovery, indexed Chamber, Chronicle, Proof, Health,
+  creation, Showcase and battles at desktop, 390px and 430px.
+- The real Privy login form and wallet-choice control render at all three widths.
+  No uncaught page errors were observed in the successful real-data browser pass.
+- Existing README screenshots and Showcase GIF remain actual app captures;
+  relative asset references resolve. Server credentials are absent from browser
+  bundles and staged changes. Diff checks pass.
 
-The indexed Chamber still presents the fixture visualization and advancement
-control despite having no observation/media payload. Its API safely disables the
-action, but the visible control and centered marker are inappropriate for the
-indexed view. No fixture Omen replaced the indexed record during the audit.
+## Final demo start
 
-The full offchain Proof of Omen is not loaded by the indexed adapter. The onchain
-commitment exists, but the proof page cannot verify or display the complete source
-manifest. Stale text claiming no Omen existed was corrected.
+Start the existing Envio service first, then:
 
-Perform an interactive Privy login/reconnect on the final demo origin to check the
-authenticated wallet and chain badge. Previous public approval verification is
-documented in the README; this audit only rechecked provider initialization and
-the real login UI. Battles and Showcase remain explicitly local experiences.
+```bash
+cd web
+pnpm demo:build
+PORT=3007 pnpm demo:start
+```
 
-The integrations are operational and the build passes, but an unconditional final
-submission sign-off is withheld until the indexed amount and mobile presentation
-issues are resolved and the intended indexed configuration is used. CRE remains
+The verified origin is `http://localhost:3007`. Shell environment values take
+precedence, followed by web production-local configuration and the ignored root
+environment. `ENVIO_GRAPHQL_URL` can point to a configured HTTPS endpoint. The
+local default is `http://localhost:8080/v1/graphql`; it contains no credentials
+and is required to pass a real deployment/chain preflight. Ordinary `pnpm start`
+keeps standard Next.js environment behavior; use the demo command for submission.
+
+The live indexed route is `/chambers/indexed-9d6541b7a855bf7c` and the partial proof
+route appends `/proof`. Source mode is separate from data mode: the Chamber's
+indexed configuration can say FIXTURE while its Omen and markets are real records.
+
+## Manual verification remaining
+
+On `http://localhost:3007`, use Connect with Privy to authenticate. Confirm an
+existing or embedded wallet, the visible address, Monad Testnet chain 10143,
+disconnect/reconnect, and separate approval/prediction controls on the real indexed
+Chamber. Do not interpret opening the login dialog as authenticated verification.
+
+If Privy rejects the origin, add the exact origin to the application's allowed
+origins in its dashboard. That account setting is not inspectable from this
+repository. A deployment on a different final origin requires the same check and
+appropriate origin configuration. No new transaction is required by this audit.
+
+The code and real-data demo are ready for that final interactive check. Full
+offchain evidence remains unavailable rather than fabricated, and CRE remains
 authenticated-simulation verified with deployment access pending.

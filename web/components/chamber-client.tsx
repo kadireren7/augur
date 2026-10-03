@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 
 import { MarketPanel } from "@/components/market-panel";
 import { ProofPanel } from "@/components/proof-panel";
+import { OmenCommitment } from "@/components/omen-commitment";
 import { SocialPanel } from "@/components/social-panel";
 import type { ChamberView } from "@/lib/types";
 
@@ -25,6 +26,7 @@ export function ChamberClient({ initial, dataMode }: { initial: ChamberView; dat
   }
 
   const displayMarket = chamber.activeMarket ?? chamber.marketHistory[0] ?? null;
+  const fixtureMode = dataMode === "LOCAL" && displayMarket?.mode !== "CONTRACT";
   return (
     <div className="page-shell">
       <section className="page-heading">
@@ -33,7 +35,7 @@ export function ChamberClient({ initial, dataMode }: { initial: ChamberView; dat
       </section>
       <div className="chamber-layout">
         <div className="main-column">
-          <section className="panel fixture-stage">
+          {fixtureMode ? <section className="panel fixture-stage">
             <div className="panel-heading"><h2>Observation chamber</h2><span className="mode-badge warning">{chamber.sourceLabel}</span></div>
             <div className="fixture-box" aria-label={chamber.observation ? `${chamber.creature.name} centroid in ${chamber.observation.zone} zone` : `${chamber.creature.name} has no observation yet`}>
               <div className="zone-lines"><span>SELL</span><span>HOLD</span><span>BUY</span></div><span className="stage-label">CENTROID VISUALIZATION · DETERMINISTIC REPLAY</span>
@@ -41,15 +43,15 @@ export function ChamberClient({ initial, dataMode }: { initial: ChamberView; dat
             </div>
             <button className="button secondary" disabled={!chamber.activeMarket} onClick={() => void advance()} type="button">Advance deterministic fixture</button>
             {advanceError && <p className="error">{advanceError}</p>}
-          </section>
+          </section> : <section className="panel"><div className="panel-heading"><h2>Chamber source</h2><span className="mode-badge">Indexed record</span></div><p className="muted">{chamber.sourceLabel}. No camera or observation stream is available in this view.</p></section>}
           <section className="signal-row">
             <article className="signal"><span>Observation</span><strong>{chamber.observation?.zone ?? "NONE"}</strong><small>{chamber.observation ? `${Math.round(chamber.observation.confidence * 100)}% confidence` : "Awaiting valid source input"}</small></article>
             <article className="signal"><span>Behavior</span><strong>{chamber.behavior?.type ?? "NONE"}</strong><small>{chamber.behavior ? `rules ${chamber.behavior.rulesetVersion}` : chamber.rulesetTemplate}</small></article>
             <article key={chamber.latestOmen?.sequence ?? "awaiting"} aria-live="polite" className={`signal omen-card ${chamber.latestOmen?.value.toLowerCase() ?? ""}`}><span>{chamber.latestOmen ? `Omen #${chamber.latestOmen.sequence}` : "No Omen"}</span><strong>{chamber.latestOmen?.value ?? "—"}</strong><small>{chamber.latestOmen ? new Date(chamber.latestOmen.observedAt).toLocaleString() : "Unpublished"}</small></article>
           </section>
           <MarketPanel market={displayMarket} onChanged={refresh} />
-          {chamber.proof ? <ProofPanel proof={chamber.proof} /> : <section className="panel"><h2>Proof of Omen</h2><p className="empty">{chamber.latestOmen ? "An Omen commitment is available, but the full offchain provenance manifest is not available through this data source." : "No provenance manifest is available yet."}</p></section>}
-          {chamber.proof && <p><Link href={`/chambers/${chamber.slug}/proof`}>Open full provenance record →</Link></p>}
+          {chamber.proof ? <ProofPanel proof={chamber.proof} /> : <OmenCommitment chamber={chamber} />}
+          {(chamber.proof || chamber.latestOmen) && <p><Link href={`/chambers/${chamber.slug}/proof`}>Open provenance record →</Link></p>}
         </div>
         <aside><SocialPanel chamberId={chamber.id} /></aside>
       </div>

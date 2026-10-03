@@ -89,12 +89,18 @@ export interface MarketView {
   minOmenSequence: number;
   resolvingSequence?: number;
   winningOutcome?: OmenValue;
-  pools: PoolTotals;
-  totalPool: number;
+  // Local fixtures use whole-token numbers; indexed contracts use exact base-unit strings.
+  pools: Record<OmenValue, number | string>;
+  totalPool: number | string;
   positions: Record<string, UserMarketPosition>;
   cancellationReason?: string;
   mode: "LOCAL_DEMO" | "CONTRACT";
 }
+
+export type LocalMarketView = Omit<MarketView, "pools" | "totalPool"> & {
+  pools: PoolTotals;
+  totalPool: number;
+};
 
 export interface ChamberSummary {
   id: string;
@@ -119,6 +125,11 @@ export interface ChamberView extends ChamberSummary {
   marketHistory: MarketView[];
   fixtureFrame: { x: number; y: number; label: string };
 }
+
+export type LocalChamberView = Omit<ChamberView, "activeMarket" | "marketHistory"> & {
+  activeMarket: LocalMarketView | null;
+  marketHistory: LocalMarketView[];
+};
 
 export interface ChamberCreationInput {
   name: string;
@@ -184,7 +195,7 @@ export interface CreatureStanding {
   battleTies: number;
   virtualPnlMicros: number;
   omenCounts: PoolTotals;
-  totalBacked: number;
+  totalBacked: number | string;
 }
 
 export interface ChronicleView {
