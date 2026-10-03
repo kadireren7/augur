@@ -26,8 +26,13 @@ try {
     const context = await browser.newContext({
       viewport: { width, height: width < 600 ? 844 : 1000 },
     });
+    context.setDefaultTimeout(60000);
     const page = await context.newPage();
     const errors = [];
+    let consoleErrors = 0;
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors++;
+    });
     page.on("pageerror", (error) =>
       errors.push({
         type: error.name,
@@ -39,11 +44,12 @@ try {
     );
     for (const route of routes) {
       const start = errors.length;
+      const consoleStart = consoleErrors;
       const response = await page.goto(base + route, {
         waitUntil: "domcontentloaded",
       });
       await page
-        .locator(".page-heading, .broadcast-hero")
+        .locator(".page-heading, .exchange-hero")
         .first()
         .waitFor({ state: "visible" });
       await page.waitForTimeout(900);
@@ -60,15 +66,32 @@ try {
       const body = await page.locator("body").innerText();
       if (
         route === chamber &&
-        (!body.includes("ENVIO") ||
-          !body.toUpperCase().includes("CONTRACT MODE") ||
+        (!body.includes("INDEXED") ||
+          !(await page.locator('[data-contract-mode="true"]').count()) ||
           !body.includes("BUY") ||
-          !body.includes("RESOLVED") ||
+          !body.includes("Pablo") ||
           /Advance deterministic fixture/.test(body))
       )
         throw new Error(
           "Indexed Chamber mode or transaction surface regression",
         );
+      if (route === chamber) {
+        if (
+          /Hamster [0-9a-f]{6}|0x[0-9a-fA-F]{40,}|LOCAL DEMO|FIXTURE/.test(body)
+        )
+          throw new Error("Technical metadata leaked into normal Chamber view");
+        for (const name of ["Approve", "Predict BUY", "Send"]) {
+          const button = page.getByRole("button", { name, exact: true });
+          if ((await button.count()) && !(await button.isDisabled()))
+            throw new Error(`Logged-out action enabled: ${name}`);
+        }
+      }
+      if (route.startsWith("/replays/")) {
+        await page.waitForFunction(
+          () => document.querySelector("video")?.readyState >= 2,
+          { timeout: 12000 },
+        );
+      }
       if (
         route === "/chronicle" &&
         (!body.includes("10 AUGD") ||
@@ -81,6 +104,7 @@ try {
         status: response.status(),
         overflow: false,
         errors: errors.slice(start),
+        consoleErrors: consoleErrors - consoleStart,
       });
       if (width === 1440 || width === 390) {
         for (
@@ -111,6 +135,7 @@ try {
             `${names[route]}${width === 390 ? "-mobile" : ""}.png`,
           ),
           fullPage: true,
+          timeout: 90000,
         });
       }
     }
@@ -121,7 +146,7 @@ try {
   });
   const page = await context.newPage();
   await page.goto(base + "/");
-  await page.locator(".broadcast-hero").waitFor();
+  await page.locator(".exchange-hero").waitFor();
   await page.waitForTimeout(1000);
   await page
     .locator("video")
@@ -139,7 +164,7 @@ try {
   await page.getByRole("button", { name: "Fish", exact: true }).click();
   if (
     (await page.locator(".creature-discovery").count()) !== 1 ||
-    !(await page.getByRole("link", { name: "Watch replay" }).isVisible())
+    !(await page.getByRole("link", { name: "Open Chamber" }).isVisible())
   )
     throw new Error("Creature category filtering failed");
   await page.getByRole("link", { name: "Chronicle", exact: true }).click();
@@ -157,7 +182,7 @@ try {
     ),
   );
   await page.getByRole("button", { name: "How payouts work" }).click();
-  if (!(await page.getByText("No platform fee.", { exact: false }).isVisible()))
+  if (!(await page.getByText("0% platform fee.", { exact: false }).isVisible()))
     throw new Error("Payout drawer failed");
   await page.getByRole("button", { name: "Fullscreen ↗" }).click();
   await page.waitForTimeout(300);
@@ -173,11 +198,11 @@ try {
     .getByRole("alert")
     .filter({ hasText: "Video unavailable" })
     .waitFor();
-  if (!(await page.locator("body").innerText()).includes("ENVIO"))
+  if (!(await page.locator("body").innerText()).includes("INDEXED"))
     throw new Error("Video failure replaced indexed mode");
   await page.reload();
-  await page.getByRole("button", { name: "Connect with Privy" }).waitFor();
-  await page.getByRole("button", { name: "Connect with Privy" }).click();
+  await page.getByRole("button", { name: "Log in", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Log in", exact: true }).click();
   await page.waitForTimeout(1200);
   const loginDialog = await page.getByRole("dialog").count();
   if (loginDialog)
@@ -211,7 +236,7 @@ try {
   await reducedPage.waitForTimeout(800);
   if (
     !(await reducedPage
-      .getByRole("heading", { name: "Watch instinct. Take a position." })
+      .getByRole("heading", { name: /The next move\.\s*Your position\./ })
       .isVisible())
   )
     throw new Error("Reduced-motion home inaccessible");
@@ -223,6 +248,13 @@ try {
         widths: [1440, 1024, 390, 430],
         allHTTP200: results.every((result) => result.status === 200),
         horizontalOverflow: false,
+        consoleErrors: results
+          .filter((result) => result.consoleErrors > 0)
+          .map(({ route, width, consoleErrors }) => ({
+            route,
+            width,
+            count: consoleErrors,
+          })),
         pageErrors: results.flatMap((result) =>
           result.errors.map((error) => ({
             route: result.route,
@@ -242,7 +274,7 @@ try {
       2,
     ),
   );
-  if (results.some((result) => result.errors.length))
+  if (results.some((result) => result.errors.length || result.consoleErrors))
     throw new Error(
       "Browser page errors detected; inspect the safe state report",
     );

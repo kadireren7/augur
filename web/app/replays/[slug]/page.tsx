@@ -1,67 +1,121 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MediaStage } from "@/components/media-stage";
-import { Reveal } from "@/components/motion-system";
+import { SocialPanel } from "@/components/social-panel";
+import { ChamberFavorite } from "@/components/chamber-favorite";
 import { creatureMedia } from "@/lib/media";
-
+import { creatureIdentity } from "@/lib/creature-identity";
+import { getStore } from "@/lib/store";
+import { configuredLiveMedia } from "@/lib/live-media";
+import { getProductRepository } from "@/lib/product-repository";
+export const dynamic = "force-dynamic";
 export default async function ReplayPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const entry = Object.entries(creatureMedia).find(
-    ([, value]) => value.slug === slug,
-  );
-  if (!entry) notFound();
-  const [species, creature] = entry;
+  const pair = Object.entries(creatureMedia).find(([, v]) => v.slug === slug);
+  if (!pair) notFound();
+  const [species, entry] = pair;
+  const identity = creatureIdentity[species as keyof typeof creatureIdentity];
+  const reference = getStore().getChamber(slug);
+  let media = entry.media,
+    unavailable = false;
+  try {
+    media =
+      (await getProductRepository().getMedia(entry.media.chamberId)) ??
+      (slug === "pablo" ? configuredLiveMedia(entry.media) : entry.media);
+  } catch {
+    unavailable = true;
+  }
   return (
-    <div className={`page-shell replay-page ${creature.accent}`}>
-      <section className="page-heading">
+    <div className={`page-shell chamber-shell ${entry.accent}`}>
+      <section className="page-heading chamber-heading">
         <div>
-          <p className="eyebrow">{species} / Recorded viewing room</p>
-          <h1>{creature.name}</h1>
-          <p>
-            {creature.behavior}. This clip is illustrative, not an attested
-            observation source.
-          </p>
+          <p className="eyebrow">{identity.label}</p>
+          <h1>{identity.name}</h1>
         </div>
-        <span className="mode-badge">REPLAY · NO ONCHAIN MARKET</span>
+        <div className="chamber-heading-links"><Link href="/">All Chambers →</Link><ChamberFavorite chamberId={entry.media.chamberId}/></div>
       </section>
-      <Reveal>
-        <MediaStage
-          source={creature.media}
-          name={creature.name}
-          behavior={creature.behavior}
-        />
-      </Reveal>
-      <section className="replay-explanation">
-        <h2>
-          Watch the creature.
-          <br />
-          Understand the rules.
-        </h2>
-        <div>
-          <p>
-            The existing zone template maps LEFT → SELL, CENTER → HOLD, RIGHT →
-            BUY after confidence and dwell validation. Video playback alone does
-            not generate an Omen.
-          </p>
-          <p>
-            No contract market has been created for this replay. Explore the
-            explicit local showcase for deterministic market cycles, or return
-            to the indexed contract Chamber.
-          </p>
-          <div className="button-row">
-            <Link className="button" href="/showcase">
-              Open local showcase ↗
-            </Link>
-            <Link className="button secondary" href="/">
-              Find indexed Chambers
-            </Link>
+      {unavailable && (
+        <p className="notice">
+          Viewing configuration unavailable. Bundled reference footage is shown.
+        </p>
+      )}
+      <div className="chamber-layout">
+        <div className="main-column">
+          <MediaStage
+            source={media}
+            name={identity.name}
+            behavior={identity.behavior}
+          />
+          <div className="feed-signal">
+            <span>
+              Behavior template<strong>{identity.behavior}</strong>
+            </span>
+            <span>
+              Market<strong>Not registered</strong>
+            </span>
           </div>
         </div>
-      </section>
+        <aside className="market-rail">
+          <section className="panel">
+            <h2>Next Omen market</h2>
+            <p className="muted">
+              No funded contract market is registered for this viewing room.
+            </p>
+            <div className="outcome-grid">
+              {["BUY", "HOLD", "SELL"].map((v) => (
+                <button
+                  className={`outcome-button ${v.toLowerCase()}`}
+                  disabled
+                  key={v}
+                >
+                  <strong>{v}</strong>
+                  <span>No pool</span>
+                </button>
+              ))}
+            </div>
+            <p>
+              Positions open after authorized registration and an onchain market
+              opening.
+            </p>
+            <Link className="button" href="/chambers/indexed-9d6541b7a855bf7c">
+              View Pablo’s market →
+            </Link>
+            <details className="technical-details">
+              <summary>Behavior rules</summary>
+              <p>{identity.rules}</p>
+              <p>
+                Video viewing is independent of oracle observations and
+                publication.
+              </p>
+            </details>
+          </section>
+        </aside>
+      </div>
+      <div className="chamber-below">
+        <section className="panel">
+          <h2>Signal history</h2>
+          <p className="muted">No onchain publications yet.</p>
+          <details className="technical-details">
+            <summary>Deterministic rule replay history</summary>
+            <p>
+              Reference observations from the existing rules fixture, not
+              signals detected in this video.
+            </p>
+            {reference.omenHistory.map((o) => (
+              <p className="history-row" key={o.sequence}>
+                <strong>{o.value}</strong>
+                <span>#{o.sequence}</span>
+                <time>{new Date(o.observedAt).toISOString()}</time>
+              </p>
+            ))}
+          </details>
+        </section>
+        <SocialPanel chamberId={entry.media.chamberId} />
+      </div>
     </div>
   );
 }

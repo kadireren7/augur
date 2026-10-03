@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Reveal } from "@/components/motion-system";
 import { formatAugd } from "@/lib/token-amount";
 import { getDataSource } from "@/lib/data-source";
+import { creatureIdentity } from "@/lib/creature-identity";
 export const dynamic = "force-dynamic";
 export default async function ChroniclePage() {
   const source = getDataSource();
@@ -14,11 +15,7 @@ export default async function ChroniclePage() {
       <section className="page-heading">
         <div>
           <p className="eyebrow">Chronicle / The historical ledger</p>
-          <h1>
-            Signals pass.
-            <br />
-            <em>Records remain.</em>
-          </h1>
+          <h1>Market history</h1>
           <p>{chronicle.disclaimer}</p>
         </div>
         <span className="mode-badge">DATA: {source.mode}</span>
@@ -43,7 +40,7 @@ export default async function ChroniclePage() {
                   <td>
                     <strong>{standing.creature.name}</strong>
                     <br />
-                    <small>{standing.creature.species}</small>
+                    <small>{creatureIdentity[standing.creature.species].label}</small>
                   </td>
                   <td>
                     {standing.battleWins} / {standing.battleLosses} /{" "}
@@ -118,7 +115,7 @@ export default async function ChroniclePage() {
           <h2>Activity</h2>
           <p>
             Most active Chamber:{" "}
-            <strong>{chronicle.mostActiveChamber ?? "No activity"}</strong>
+            <strong>{chambers.find(chamber=>chamber.id===chronicle.mostActiveChamber)?.creature.name ?? "No activity"}</strong>
           </p>
           <p>
             Most backed creature:{" "}

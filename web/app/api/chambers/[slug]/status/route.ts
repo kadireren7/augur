@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireMutationCapacity } from "@/lib/api-rate-limit";
 import { apiError } from "@/lib/http";
 import { getStore } from "@/lib/store";
+import { requirePrivyIdentity } from "@/lib/product-auth";
 
 const schema = z.object({
   actor: z.string().min(8).max(100),
@@ -13,6 +14,7 @@ const schema = z.object({
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
   try {
     requireMutationCapacity(request, "chamber-status");
+    const subject = await requirePrivyIdentity(request);
     if (process.env.ENVIO_GRAPHQL_URL) {
       return NextResponse.json(
         { error: "LIVE_MODE", message: "Use the owner wallet transaction in indexed mode" },
@@ -20,7 +22,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       );
     }
     const { slug } = await context.params;
-    const input = schema.parse(await request.json());
+    const input = schema.parse({...await request.json(),actor:subject});
     return NextResponse.json({ chamber: getStore().setChamberStatus(slug, input.actor, input.status) });
   } catch (error) {
     return apiError(error);

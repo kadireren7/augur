@@ -1,5 +1,7 @@
 import { buildChronicle } from "@/lib/chronicle";
 import { getStore } from "@/lib/store";
+import { creatureIdentity } from "@/lib/creature-identity";
+import { cachedSnapshot } from "@/lib/snapshot-cache";
 import type {
   BattleResult, BattleView, ChamberStatus, ChamberView, ChronicleView, Creature,
   MarketState, MarketView, OmenValue, SourceMode,
@@ -188,28 +190,28 @@ export class EnvioDataSource implements AugurDataSource {
     const species = (["Hamster", "Fish", "Turtle"] as const)[value.species] ?? "Hamster";
     return {
       id: value.id,
-      name: `${species} ${value.id.replace(/^0x/, "").slice(0, 6)}`,
+      name: creatureIdentity[species].name,
       species,
-      description: `Metadata commitment ${value.metadataHash}`,
+      description: creatureIdentity[species].behavior,
     };
   }
 
   private unknownCreature(id: string): Creature {
     return {
-      id, name: `Creature ${id.replace(/^0x/, "").slice(0, 6)}`, species: "Hamster",
+      id, name: "Unlisted creature", species: "Hamster",
       description: "Indexed metadata unavailable",
     };
   }
 
   private snapshot(): Promise<IndexedSnapshot> {
-    return this.query<IndexedSnapshot>(`query AugurSnapshot {
+    return cachedSnapshot(this.endpoint, () => this.query<IndexedSnapshot>(`query AugurSnapshot {
       Creature { id species metadataHash omenBuy omenHold omenSell battleWins battleLosses battleTies virtualPnl }
       Chamber { id creatureId rulesetHash owner sourceMode status latestSequence omenCount volume }
       Omen(order_by: { blockNumber: desc }) { chamberId creatureId sequence omenType behaviorType observedAt provenanceHash }
       Market(order_by: { id: desc }) { id chamberId state opensAt locksAt resolutionDeadline minOmenSequence winningOutcome resolvingSequence cancellationReason volume }
       Prediction { marketId outcome amount }
       Battle(order_by: { startsAt: desc }) { id creatureA creatureB chamberA chamberB asset startsAt endsAt startingNotional scoringConfigHash state result pnlA pnlB priceSeriesHash cancellationReason }
-    }`);
+    }`));
   }
 
   private async query<T>(query: string): Promise<T> {

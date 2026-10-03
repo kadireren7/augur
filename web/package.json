@@ -15,10 +15,13 @@
     "lint": "eslint .",
     "production:check": "node scripts/production-check.mjs"
   },
-  "engines": {"node": "24.x"},
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@privy-io/react-auth": "3.45.0",
     "hls.js": "^1.7.3",
+    "jose": "^6.2.12",
     "motion": "^14.0.0",
     "next": "16.3.6",
     "react": "19.3.0",

@@ -31,6 +31,6 @@ describe("indexed token precision and source integrity", () => {
   });
   it("fails explicitly when the configured indexer is unavailable", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("unavailable", { status: 503 })));
-    await expect(new EnvioDataSource("http://localhost:8080/v1/graphql").listChambers()).rejects.toThrow("Envio request failed");
+    await expect(new EnvioDataSource("http://localhost:8081/v1/graphql").listChambers()).rejects.toThrow("Envio request failed");
   });
 });

@@ -7,6 +7,7 @@ import { requireMutationCapacity } from "@/lib/api-rate-limit";
 import { getStore } from "@/lib/store";
 import { getProductRepository } from "@/lib/product-repository";
 import { creatureMedia } from "@/lib/media";
+import { requirePrivyIdentity } from "@/lib/product-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     requireMutationCapacity(request, "create-chamber");
+    const subject = await requirePrivyIdentity(request);
     if (process.env.ENVIO_GRAPHQL_URL) {
       return NextResponse.json(
         {
@@ -35,7 +37,7 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
-    const input = chamberCreationSchema.parse(await request.json());
+    const input = chamberCreationSchema.parse({...await request.json(),ownerId:subject});
     const chamber = getStore().createChamber(input);
     if (input.viewingSource)
       await getProductRepository().savePrepared(

@@ -1,116 +1,133 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { MediaStage } from "@/components/media-stage";
-import { Reveal, ScrollStage } from "@/components/motion-system";
-import { PayoutGuide } from "@/components/payout-guide";
 import { creatureMedia } from "@/lib/media";
-import { formatAugd } from "@/lib/token-amount";
+import { creatureIdentity } from "@/lib/creature-identity";
+import { formatAugd, poolPercentage } from "@/lib/token-amount";
 import type { ChamberView, Species } from "@/lib/types";
 
 export function Discovery({
-  chambers,
+  chambers: initialChambers,
   dataMode,
 }: {
   chambers: ChamberView[];
   dataMode: "LOCAL" | "ENVIO";
 }) {
+  const [chambers, setChambers] = useState(initialChambers);
+  const [updateError, setUpdateError] = useState(false);
+  useEffect(() => {
+    if (dataMode !== "ENVIO") return;
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void fetch("/api/chambers", {
+        signal: AbortSignal.timeout(5000),
+        cache: "no-store",
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error();
+          setChambers((await response.json()).chambers);
+          setUpdateError(false);
+        })
+        .catch(() => setUpdateError(true));
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [dataMode]);
   const [category, setCategory] = useState<Species | "All">("All");
   const featured =
-    chambers.find((chamber) => chamber.creature.species === "Hamster") ??
-    chambers[0];
-  const featuredMedia = creatureMedia[featured?.creature.species ?? "Hamster"];
+    chambers.find((c) => c.creature.species === "Hamster") ?? chambers[0];
+  const market = featured?.activeMarket ?? featured?.marketHistory[0];
+  const settled = featured?.marketHistory.find(
+    (round) => round.state === "RESOLVED",
+  );
+  const href = featured ? `/chambers/${featured.slug}` : "/replays/pablo";
+  const recent = chambers
+    .flatMap((c) =>
+      c.omenHistory.map((o) => ({ ...o, name: c.creature.name, slug: c.slug })),
+    )
+    .sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt))
+    .slice(0, 6);
   return (
     <div className="discovery">
-      <section className="broadcast-hero">
-        <ScrollStage>
-          <MediaStage
-            source={featuredMedia.media}
-            name={featured?.creature.name ?? "Hamster replay"}
-            compact
-            ambient
-          />
-        </ScrollStage>
+      <section className="exchange-hero">
+        <MediaStage
+          source={creatureMedia.Hamster.media}
+          name="Pablo"
+          compact
+          ambient
+        />
         <div className="hero-vignette" />
-        <Reveal className="hero-editorial">
-          <p className="eyebrow">Augur / Creature prediction exchange</p>
+        <div className="exchange-hero-copy">
+          <p className="eyebrow">Creature prediction exchange</p>
           <h1>
-            Watch instinct.
+            The next move.
             <br />
-            <em>Take a position.</em>
+            Your position.
           </h1>
-          <p>
-            Creature behavior becomes an Omen.
-            <br />
-            The next signal settles the market.
-          </p>
-          <div className="hero-actions">
-            <Link
-              className="button"
-              href={featured ? `/chambers/${featured.slug}` : "/replays/pablo"}
-            >
-              Watch the Chamber ↗
-            </Link>
-            <Link className="text-link" href="#discover">
-              Explore creatures ↓
-            </Link>
+          <p>Stake on the next BUY, HOLD or SELL Omen.</p>
+          <Link className="button" href={href}>
+            Enter Pablo’s Chamber ↗
+          </Link>
+        </div>
+        <div className="hero-market">
+          <div className="panel-heading">
+            <h2>
+              Pablo <small>Hamster</small>
+            </h2>
+            <span className="mode-badge">
+              {dataMode === "ENVIO" ? "INDEXED · TESTNET" : "SIMULATION"}
+            </span>
           </div>
-        </Reveal>
-        <div className="broadcast-caption">
-          <span>
-            <i className="signal-light" /> MONAD TESTNET ·{" "}
-            {dataMode === "ENVIO" ? "INDEXED CONTRACT DATA" : "LOCAL DEMO DATA"}
-          </span>
-          <span>Illustrative replay · not Omen evidence</span>
+          <div className="hero-market-summary">
+            <span>
+              Latest Omen
+              <strong className="buy">
+                {featured?.latestOmen?.value ?? "Awaiting"}
+              </strong>
+            </span>
+            <span>
+              Total pool
+              <strong>{formatAugd(market?.totalPool ?? 0)} AUGD</strong>
+            </span>
+          </div>
+          <div className="outcome-grid">
+            {(["BUY", "HOLD", "SELL"] as const).map((outcome) => (
+              <Link
+                className={`outcome-button ${outcome.toLowerCase()}`}
+                href={href}
+                key={outcome}
+              >
+                <strong>{outcome}</strong>
+                <span>{formatAugd(market?.pools[outcome] ?? 0)} AUGD</span>
+                <small>
+                  {market
+                    ? poolPercentage(market.pools[outcome], market.totalPool)
+                    : 0}
+                  % of pool
+                </small>
+              </Link>
+            ))}
+          </div>
+          <div className="hero-market-footer">
+            <span>
+              Market {market?.id ?? "—"} · {market?.state ?? "Unavailable"}
+            </span>
+            <Link href={href}>View market →</Link>
+          </div>
         </div>
       </section>
       <div className="page-shell">
-        <Reveal className="featured-strip">
-          <div>
-            <p className="eyebrow">
-              Featured / {featured?.creature.species ?? "Hamster"}
-            </p>
-            <h2>{featured?.creature.name ?? "Recorded observation"}</h2>
-          </div>
-          <div>
-            <span>Latest Omen</span>
-            <strong
-              className={`omen ${featured?.latestOmen?.value.toLowerCase() ?? ""}`}
-            >
-              {featured?.latestOmen?.value ?? "Awaiting"}
-            </strong>
-          </div>
-          <div>
-            <span>Market</span>
-            <strong>
-              {(featured?.activeMarket ?? featured?.marketHistory[0])?.state ??
-                "None"}
-            </strong>
-          </div>
-          <div>
-            <span>Pool</span>
-            <strong>
-              {formatAugd(
-                (featured?.activeMarket ?? featured?.marketHistory[0])
-                  ?.totalPool ?? 0,
-              )}{" "}
-              AUGD
-            </strong>
-          </div>
-          <Link
-            href={featured ? `/chambers/${featured.slug}` : "/replays/pablo"}
-          >
-            Open view ↗
-          </Link>
-        </Reveal>
+        {updateError && (
+          <p className="notice">
+            Updates unavailable. Showing the last indexed record.
+          </p>
+        )}
         <section id="discover" className="discovery-section">
-          <Reveal className="section-heading">
+          <div className="section-heading">
             <div>
-              <p className="eyebrow">
-                Different creatures. Observable signals.
-              </p>
-              <h2>Choose your Chamber.</h2>
+              <p className="eyebrow">Chambers</p>
+              <h2>Choose your next signal.</h2>
             </div>
             <div
               className="category-tabs"
@@ -124,71 +141,61 @@ export function Discovery({
                   onClick={() => setCategory(value)}
                   key={value}
                 >
-                  {value}
+                  {value === "Turtle" ? "Tortoise" : value}
                 </button>
               ))}
             </div>
-          </Reveal>
+          </div>
           <div className="creature-grid">
             {(Object.keys(creatureMedia) as Species[])
-              .filter((species) => category === "All" || species === category)
-              .map((species, index) => {
-                const entry = creatureMedia[species];
-                const real = chambers.find(
-                  (chamber) => chamber.creature.species === species,
-                );
-                const liveContract = dataMode === "ENVIO" && !!real;
+              .filter((s) => category === "All" || s === category)
+              .map((species) => {
+                const entry = creatureMedia[species],
+                  identity = creatureIdentity[species],
+                  room = chambers.find((c) => c.creature.species === species);
+                const indexed = dataMode === "ENVIO" && !!room;
+                const target = room
+                  ? `/chambers/${room.slug}`
+                  : `/replays/${entry.slug}`;
+                const current = room?.activeMarket ?? room?.marketHistory[0];
                 return (
                   <motion.article
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: index * 0.08 }}
+                    whileHover={{ y: -3 }}
+                    whileTap={{ scale: 0.995 }}
                     className={`creature-discovery ${entry.accent}`}
                     key={species}
                   >
-                    <Link
-                      href={
-                        real
-                          ? `/chambers/${real.slug}`
-                          : `/replays/${entry.slug}`
-                      }
-                      className="creature-image-link"
-                    >
+                    <Link href={target} className="creature-image-link">
                       <MediaStage
                         source={entry.media}
-                        name={entry.name}
+                        name={identity.name}
                         compact
                       />
-                      <span className="discovery-mode">
-                        {liveContract
-                          ? "LIVE CONTRACT · TESTNET"
-                          : "REPLAY / LOCAL DEMO"}
-                      </span>
                     </Link>
                     <div className="creature-info">
-                      <p className="eyebrow">
-                        {species} / {entry.behavior}
-                      </p>
-                      <h3>{real?.creature.name ?? entry.name}</h3>
-                      <p>
-                        {liveContract
-                          ? "Real indexed Omen and market. Video is illustrative replay."
-                          : "Recorded footage and deterministic rule templates. No onchain market."}
-                      </p>
-                      <Link
-                        className="card-link"
-                        href={
-                          real
-                            ? `/chambers/${real.slug}`
-                            : `/replays/${entry.slug}`
-                        }
-                      >
-                        {liveContract
-                          ? "Enter contract Chamber"
-                          : "Watch replay"}{" "}
-                        <span>↗</span>
+                      <div className="panel-heading">
+                        <h3>{identity.name}</h3>
+                        <span className="eyebrow">{identity.label}</span>
+                      </div>
+                      <p>{identity.behavior}</p>
+                      {indexed ? (
+                        <div className="card-market">
+                          <span className="mode-badge">Indexed</span>
+                          <span>
+                            {room?.latestOmen?.value ?? "Awaiting"} ·{" "}
+                            {current?.state ?? "No market"}
+                          </span>
+                          <strong>
+                            {formatAugd(current?.totalPool ?? 0)} AUGD
+                          </strong>
+                        </div>
+                      ) : (
+                        <p className="muted">
+                          Viewing room · funded market not registered
+                        </p>
+                      )}
+                      <Link className="card-link" href={target}>
+                        Open Chamber <span>↗</span>
                       </Link>
                     </div>
                   </motion.article>
@@ -196,108 +203,51 @@ export function Discovery({
               })}
           </div>
         </section>
-        <section className="story-section">
-          <div className="sticky-story">
-            <p className="eyebrow">Behavior, not belief.</p>
-            <h2>
-              The creature moves.
-              <br />
-              The rules decide.
-              <br />
-              <em>The chain remembers.</em>
-            </h2>
-            <p>
-              Augur does not ask a model to invent a prediction. Versioned rules
-              turn observable behavior into BUY, HOLD, or SELL.
-            </p>
-            <Link
-              className="text-link"
-              href={
-                featured ? `/chambers/${featured.slug}/proof` : "/chronicle"
-              }
-            >
-              Follow the provenance ↗
-            </Link>
+        <section className="exchange-recent">
+          {settled && (
+            <div className="settled-strip">
+              <span>Last settled · Market #{settled.id}</span>
+              <strong className={settled.winningOutcome?.toLowerCase()}>
+                {settled.winningOutcome}
+              </strong>
+              <span>{formatAugd(settled.totalPool)} AUGD pool</span>
+              <Link href="/chronicle">Settlement history →</Link>
+            </div>
+          )}
+          <div className="section-heading">
+            <h2>Recent Omens</h2>
+            <Link href="/chronicle">Full history →</Link>
           </div>
-          <div className="story-steps">
-            <Reveal>
-              <span className="story-symbol">◉</span>
-              <h3>Observe</h3>
-              <p>
-                A declared source supplies observations. Replays, browser
-                cameras, and live streams retain their own trust labels.
-              </p>
-            </Reveal>
-            <Reveal>
-              <span className="story-symbol">↝</span>
-              <h3>Interpret</h3>
-              <p>
-                Behavior and Omen rules bind the signal to a provenance
-                commitment. CRE validates publication requests in the verified
-                simulation path.
-              </p>
-            </Reveal>
-            <Reveal>
-              <span className="story-symbol">↗</span>
-              <h3>Settle</h3>
-              <p>
-                Authorized publication resolves the eligible market on Monad.
-                Envio carries the contract event into this interface.
-              </p>
-            </Reveal>
-          </div>
+          {recent.length ? (
+            <div className="omen-ticker">
+              {recent.map((o) => (
+                <Link
+                  href={`/chambers/${o.slug}`}
+                  className="ticker-event"
+                  key={`${o.slug}-${o.sequence}`}
+                >
+                  <span>{o.name}</span>
+                  <strong className={o.value.toLowerCase()}>{o.value}</strong>
+                  <span>#{o.sequence}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">No published Omens available.</p>
+          )}
         </section>
-        <Reveal>
-          <PayoutGuide expanded />
-        </Reveal>
-        <section className="closing-grid">
-          <Reveal>
-            <Link href="/battles">
-              <p className="eyebrow">Creature arena / declared replays</p>
-              <h2>
-                Two instincts.
-                <br />
-                One price path.
-              </h2>
-              <p>
-                Compare deterministic virtual performance. No animal trades or
-                holds funds.
-              </p>
-              <span>View Battles ↗</span>
-            </Link>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <Link href="/chronicle">
-              <p className="eyebrow">The ledger</p>
-              <h2>
-                Signals pass.
-                <br />
-                Records remain.
-              </h2>
-              <p>
-                Explore indexed Omen counts, market outcomes, and backed stakes.
-              </p>
-              <span>Open Chronicle ↗</span>
-            </Link>
-          </Reveal>
+        <section className="exchange-links">
+          <Link href="/battles">
+            <span>The Pit</span>
+            <h2>Creature matchups →</h2>
+            <p>Compare declared replay outcomes and virtual performance.</p>
+          </Link>
+          <Link href="/chronicle">
+            <span>Chronicle</span>
+            <h2>Follow the record →</h2>
+            <p>Published Omens, market outcomes and backing history.</p>
+          </Link>
         </section>
-        <Reveal className="integration-strip">
-          <div>
-            Monad<small>Testnet settlement</small>
-          </div>
-          <div>
-            Envio<small>Real event indexing</small>
-          </div>
-          <div>
-            Alchemy<small>Server RPC</small>
-          </div>
-          <div>
-            Privy<small>Wallet signing</small>
-          </div>
-          <div>
-            Chainlink CRE<small>Authenticated simulation</small>
-          </div>
-        </Reveal>
       </div>
     </div>
   );

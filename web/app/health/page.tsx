@@ -7,10 +7,8 @@ import { getStore } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export default async function HealthPage() {
-  const rpc = await checkRpcHealth();
-  const envio = await checkEnvioHealth();
+  const [rpc,envio,database] = await Promise.all([checkRpcHealth(),checkEnvioHealth(),checkProductHealth()]);
   const config = getServerConfig();
-  const database = await checkProductHealth();
   const rows = [
     ["Web", "HEALTHY"],
     ["Data source", process.env.ENVIO_GRAPHQL_URL ? "ENVIO" : "LOCAL"],

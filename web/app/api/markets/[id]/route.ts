@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireMutationCapacity } from "@/lib/api-rate-limit";
 import { apiError } from "@/lib/http";
 import { getStore } from "@/lib/store";
+import { requirePrivyIdentity } from "@/lib/product-auth";
 
 const actionSchema = z.discriminatedUnion("action", [
   z.object({
@@ -31,8 +32,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       );
     }
     const { id } = await context.params;
+    const subject = await requirePrivyIdentity(request);
     const marketId = z.coerce.number().int().positive().parse(id);
-    const input = actionSchema.parse(await request.json());
+    const input = actionSchema.parse({...await request.json(),sessionId:subject});
     const store = getStore();
     const feedback =
       input.action === "approve"

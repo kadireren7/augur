@@ -10,6 +10,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 
 import { useSession } from "@/components/providers";
+import { authHeaders } from "@/lib/auth-headers";
 import type { ChatMessage, ReactionPulse, ReactionValue } from "@/lib/types";
 
 const reactions: ReactionValue[] = ["BUY", "HOLD", "SELL", "HYPE", "RIP"];
@@ -33,9 +34,11 @@ export function SocialPanel({ chamberId }: { chamberId: string }) {
       const [chatResponse, pulseResponse] = await Promise.all([
         fetch(`/api/chat?chamberId=${encodeURIComponent(chamberId)}`, {
           cache: "no-store",
+          signal: AbortSignal.timeout(5000),
         }),
         fetch(`/api/reactions?chamberId=${encodeURIComponent(chamberId)}`, {
           cache: "no-store",
+          signal: AbortSignal.timeout(5000),
         }),
       ]);
       if (!chatResponse.ok || !pulseResponse.ok) throw new Error();
@@ -51,7 +54,9 @@ export function SocialPanel({ chamberId }: { chamberId: string }) {
 
   useEffect(() => {
     const initial = window.setTimeout(() => void refresh(), 0);
-    const timer = window.setInterval(() => void refresh(), 3_000);
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refresh();
+    }, 15_000);
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(timer);
@@ -64,10 +69,10 @@ export function SocialPanel({ chamberId }: { chamberId: string }) {
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: await authHeaders(session),
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           chamberId,
-          sessionId: session.sessionId,
           displayName,
           text,
         }),
@@ -86,10 +91,10 @@ export function SocialPanel({ chamberId }: { chamberId: string }) {
     try {
       const response = await fetch("/api/reactions", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: await authHeaders(session),
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           chamberId,
-          sessionId: session.sessionId,
           reaction,
         }),
       });
@@ -107,7 +112,6 @@ export function SocialPanel({ chamberId }: { chamberId: string }) {
     <section className="panel social-panel">
       <div className="panel-heading">
         <h2>Crowd</h2>
-        <span className="mode-badge">Offchain only</span>
       </div>
       <div className="pulse" aria-label="Crowd pulse">
         <span>BUY {pulse?.percentages.BUY ?? "—"}%</span>
@@ -119,6 +123,7 @@ export function SocialPanel({ chamberId }: { chamberId: string }) {
           <button
             className="button secondary compact"
             key={reaction}
+            disabled={!session.authenticated}
             onClick={() => void react(reaction)}
             type="button"
           >
@@ -161,22 +166,33 @@ export function SocialPanel({ chamberId }: { chamberId: string }) {
       <form className="chat-form" onSubmit={(event) => void sendMessage(event)}>
         <input
           aria-label="Display name"
+          disabled={!session.authenticated}
           maxLength={32}
           onChange={(event) => setDisplayName(event.target.value)}
           value={displayName}
         />
         <input
           aria-label="Chat message"
+          disabled={!session.authenticated}
           maxLength={280}
           onChange={(event) => setText(event.target.value)}
           placeholder="Message this Chamber"
           required
           value={text}
         />
-        <button className="button" type="submit">
+        <button
+          className="button"
+          type="submit"
+          disabled={!session.authenticated}
+        >
           Send
         </button>
       </form>
+      {!session.authenticated && (
+        <button className="button secondary compact" onClick={session.connect} type="button">
+          Log in to chat or react
+        </button>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}

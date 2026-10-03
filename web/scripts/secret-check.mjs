@@ -11,7 +11,7 @@ const secrets = Object.entries(process.env).filter(
   ([name, value]) =>
     !name.startsWith("NEXT_PUBLIC_") &&
     !/(ADDRESS|WORKFLOW_ID|CHAIN_ID)$/.test(name) &&
-    /(PRIVATE_KEY|API_KEY|API_TOKEN|SECRET|TOKEN)/.test(name) &&
+    /(PRIVATE_KEY|API_KEY|API_TOKEN|SERVICE_ROLE_KEY|SECRET|TOKEN)/.test(name) &&
     value?.length >= 16,
 );
 if (process.env.ALCHEMY_MONAD_RPC_URL) {

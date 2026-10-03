@@ -36,6 +36,7 @@ interface SessionIdentity {
   disconnect(): Promise<void> | void;
   switchToMonad?(): Promise<void>;
   getProvider?(): Promise<unknown>;
+  getAccessToken?(): Promise<string | null>;
   retryInitialization(): void;
 }
 
@@ -70,38 +71,57 @@ function LocalSession({ children }: { children: ReactNode }) {
     }),
     [sessionId],
   );
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
 }
 
-function UnavailableSession({ children, error }: { children: ReactNode; error: string }) {
-  const value = useMemo<SessionIdentity>(() => ({
-    mode: "UNAVAILABLE",
-    walletState: "ERROR",
-    ready: true,
-    authenticated: false,
-    sessionId: "privy-unavailable",
-    displayName: "Wallet unavailable",
-    error,
-    connect: () => undefined,
-    disconnect: () => undefined,
-    retryInitialization: () => window.location.reload(),
-  }), [error]);
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+function UnavailableSession({
+  children,
+  error,
+}: {
+  children: ReactNode;
+  error: string;
+}) {
+  const value = useMemo<SessionIdentity>(
+    () => ({
+      mode: "UNAVAILABLE",
+      walletState: "ERROR",
+      ready: true,
+      authenticated: false,
+      sessionId: "privy-unavailable",
+      displayName: "Wallet unavailable",
+      error,
+      connect: () => undefined,
+      disconnect: () => undefined,
+      retryInitialization: () => window.location.reload(),
+    }),
+    [error],
+  );
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
 }
 
 function PrivySession({ children }: { children: ReactNode }) {
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { ready, authenticated, user, login, logout, getAccessToken } =
+    usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
   const wallet = wallets[0];
   const chainId = parseWalletChainId(wallet?.chainId);
   const [actionError, setActionError] = useState("");
   const [timedOut, setTimedOut] = useState(false);
-  const initializing = !ready
-    || (authenticated && (!walletsReady || wallets.length === 0 || chainId === undefined));
+  const initializing =
+    !ready ||
+    (authenticated &&
+      (!walletsReady || wallets.length === 0 || chainId === undefined));
 
   useEffect(() => {
     if (!initializing) return;
-    const timer = window.setTimeout(() => setTimedOut(true), PRIVY_INITIALIZATION_TIMEOUT_MS);
+    const timer = window.setTimeout(
+      () => setTimedOut(true),
+      PRIVY_INITIALIZATION_TIMEOUT_MS,
+    );
     return () => window.clearTimeout(timer);
   }, [initializing]);
 
@@ -130,53 +150,69 @@ function PrivySession({ children }: { children: ReactNode }) {
   }, [authenticated, chainId, walletState, wallets.length]);
 
   const value: SessionIdentity = {
-      mode: "PRIVY",
-      walletState,
-      ready: walletState !== "INITIALIZING",
-      authenticated,
-      sessionId: wallet?.address ?? user?.id ?? "privy-pending-session",
-      displayName: wallet?.address ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}` : "Privy user",
-      error: actionError || initializationError || undefined,
-      address: wallet?.address as Address | undefined,
-      chainId,
-      connect: async () => {
-        setActionError("");
-        setTimedOut(false);
-        try {
-          await login();
-        } catch (reason) {
-          setActionError(reason instanceof Error ? reason.message : "Privy login failed");
-        }
-      },
-      disconnect: async () => {
-        setActionError("");
-        setTimedOut(false);
-        try {
-          await logout();
-        } catch (reason) {
-          setActionError(reason instanceof Error ? reason.message : "Privy logout failed");
-        }
-      },
-      switchToMonad: wallet
-        ? async () => {
+    mode: "PRIVY",
+    walletState,
+    ready: walletState !== "INITIALIZING",
+    authenticated,
+    sessionId: user?.id ?? "privy-pending-session",
+    displayName: wallet?.address
+      ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`
+      : "Privy user",
+    error: actionError || initializationError || undefined,
+    address: wallet?.address as Address | undefined,
+    getAccessToken,
+    chainId,
+    connect: async () => {
+      setActionError("");
+      setTimedOut(false);
+      try {
+        await login();
+      } catch (reason) {
+        setActionError(
+          reason instanceof Error ? reason.message : "Privy login failed",
+        );
+      }
+    },
+    disconnect: async () => {
+      setActionError("");
+      setTimedOut(false);
+      try {
+        await logout();
+      } catch (reason) {
+        setActionError(
+          reason instanceof Error ? reason.message : "Privy logout failed",
+        );
+      }
+    },
+    switchToMonad: wallet
+      ? async () => {
           setActionError("");
           try {
             await wallet.switchChain(MONAD_TESTNET_CHAIN_ID);
           } catch (reason) {
-            setActionError(reason instanceof Error ? reason.message : "Monad Testnet switch failed");
+            setActionError(
+              reason instanceof Error
+                ? reason.message
+                : "Monad Testnet switch failed",
+            );
           }
         }
-        : undefined,
-      getProvider: wallet ? () => wallet.getEthereumProvider() : undefined,
-      retryInitialization: () => window.location.reload(),
-    };
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+      : undefined,
+    getProvider: wallet ? () => wallet.getEthereumProvider() : undefined,
+    retryInitialization: () => window.location.reload(),
+  };
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
 }
 
-class PrivyErrorBoundary extends Component<{
-  children: ReactNode;
-  fallback: ReactNode;
-}, { failed: boolean }> {
+class PrivyErrorBoundary extends Component<
+  {
+    children: ReactNode;
+    fallback: ReactNode;
+  },
+  { failed: boolean }
+> {
   state = { failed: false };
 
   static getDerivedStateFromError(): { failed: boolean } {
@@ -204,21 +240,30 @@ export function AppProviders({ children }: { children: ReactNode }) {
     rpcUrl: process.env.NEXT_PUBLIC_MONAD_RPC_URL,
     explicitLocalMode: process.env.NEXT_PUBLIC_PRIVY_LOCAL_MODE === "true",
   });
-  if (runtime.mode === "LOCAL_DEV") return <LocalSession>{children}</LocalSession>;
+  if (runtime.mode === "LOCAL_DEV")
+    return <LocalSession>{children}</LocalSession>;
   if (runtime.mode === "UNAVAILABLE") {
-    return <UnavailableSession error={runtime.error}>{children}</UnavailableSession>;
+    return (
+      <UnavailableSession error={runtime.error}>{children}</UnavailableSession>
+    );
   }
   const monadTestnet = createMonadTestnetChain(runtime.rpcUrl);
   return (
-    <PrivyErrorBoundary fallback={(
-      <UnavailableSession error="Privy provider initialization failed">{children}</UnavailableSession>
-    )}>
+    <PrivyErrorBoundary
+      fallback={
+        <UnavailableSession error="Privy provider initialization failed">
+          {children}
+        </UnavailableSession>
+      }
+    >
       <PrivyProvider
         appId={runtime.appId}
         config={{
           defaultChain: monadTestnet,
           supportedChains: [monadTestnet],
-          embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } },
+          embeddedWallets: {
+            ethereum: { createOnLogin: "users-without-wallets" },
+          },
         }}
       >
         <PrivySession>{children}</PrivySession>

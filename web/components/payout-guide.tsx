@@ -42,7 +42,7 @@ export function PayoutGuide({ expanded = false }: { expanded?: boolean }) {
               <span>Winners claim</span>
             </div>
             <p className="muted">
-              No platform fee. No treasury cut. Losing stakes fund winning
+              0% platform fee. Losing stakes fund winning
               payouts. No winning stakes means cancellation; cancelled markets
               refund original stakes. The final winning claimant receives any
               integer-rounding remainder.

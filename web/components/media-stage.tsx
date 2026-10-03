@@ -30,14 +30,19 @@ export function MediaStage({
   const [muted, setMuted] = useState(true);
   const [zones, setZones] = useState(false);
   const [cameraStarted, setCameraStarted] = useState(false);
+  const [cameraBusy, setCameraBusy] = useState(false);
   const [reload, setReload] = useState(0);
+  const [playingSource, setPlayingSource] = useState("");
+  const [liveSource, setLiveSource] = useState("");
+  const sourceKey = `${source.id}:${source.sourceUrl ?? "camera"}`;
   useEffect(() => {
     if (
       (compact && !ambient) ||
       source.status !== "available" ||
       source.sourceType === "fixture" ||
       (source.sourceType === "browser_camera" && !cameraStarted) ||
-      status !== "LOADING"
+      (!["LOADING", "RECONNECTING"].includes(status) &&
+        !(source.sourceType === "live_hls" && liveSource !== sourceKey))
     )
       return;
     const timer = window.setTimeout(
@@ -56,6 +61,8 @@ export function MediaStage({
     source.status,
     status,
     reload,
+    liveSource,
+    sourceKey,
   ]);
   useEffect(() => {
     const element = video.current;
@@ -79,13 +86,35 @@ export function MediaStage({
             return;
           }
           const hls = new Hls();
+          let retries = 0;
+          let retry: ReturnType<typeof setTimeout> | undefined;
           hls.loadSource(source.sourceUrl!);
           hls.attachMedia(element);
-          hls.on(Hls.Events.ERROR, (_event, data) => {
-            if (data.fatal)
-              setError("Live stream unavailable. No replay substituted.");
+          hls.on(Hls.Events.LEVEL_LOADED, (_event, data) => {
+            if (data.details.live) {
+              setLiveSource(`${source.id}:${source.sourceUrl}`);
+              setError("");
+            } else
+              setError(
+                "This playlist is recorded, not a live stream. Configure it as a replay.",
+              );
           });
-          cleanup = () => hls.destroy();
+          hls.on(Hls.Events.ERROR, (_event, data) => {
+            if (!data.fatal) return;
+            if (retries++ < 1) {
+              setStatus("RECONNECTING");
+              retry = setTimeout(() => {
+                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+                else if (data.type === Hls.ErrorTypes.MEDIA_ERROR)
+                  hls.recoverMediaError();
+                else setError("Stream offline. Try reconnecting.");
+              }, 1000);
+            } else setError("Stream offline. Try reconnecting.");
+          });
+          cleanup = () => {
+            clearTimeout(retry);
+            hls.destroy();
+          };
         })
         .catch(() => setError("Live stream player could not initialize."));
     return () => {
@@ -101,11 +130,30 @@ export function MediaStage({
     };
   }, []);
   async function camera() {
+    if (cameraBusy) return;
+    setCameraBusy(true);
+    let expired = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const request = navigator.mediaDevices.getUserMedia({
         video: true,
         audio: false,
       });
+      const stream = await Promise.race([
+        request.then((value) => {
+          if (expired) {
+            value.getTracks().forEach((track) => track.stop());
+            throw new Error();
+          }
+          return value;
+        }),
+        new Promise<MediaStream>((_resolve, reject) => {
+          timeout = setTimeout(() => {
+            expired = true;
+            reject(new Error());
+          }, 15000);
+        }),
+      ]);
       if (!video.current) {
         stream.getTracks().forEach((track) => track.stop());
         return;
@@ -117,6 +165,9 @@ export function MediaStage({
       setError(
         "Camera unavailable or permission declined. Nothing was recorded or uploaded.",
       );
+    } finally {
+      clearTimeout(timeout);
+      setCameraBusy(false);
     }
   }
   const live =
@@ -130,7 +181,7 @@ export function MediaStage({
           playsInline
           muted={muted}
           loop={!live}
-          controls={!compact}
+          controls={!compact && !live}
           preload={compact && !ambient ? "none" : "metadata"}
           poster={source.poster ?? undefined}
           src={
@@ -140,7 +191,24 @@ export function MediaStage({
               : undefined
           }
           onLoadedData={() => setStatus("READY")}
-          onPlaying={() => setStatus("PLAYING")}
+          onDurationChange={() => {
+            if (
+              source.sourceType === "live_hls" &&
+              video.current?.duration === Infinity
+            )
+              setLiveSource(sourceKey);
+          }}
+          onPlaying={() => {
+            setStatus("PLAYING");
+            setPlayingSource(sourceKey);
+            if (source.sourceType !== "live_hls") setError("");
+            if (
+              source.sourceType === "browser_camera" &&
+              video.current?.srcObject
+            )
+              setLiveSource(sourceKey);
+          }}
+          onWaiting={() => live && setStatus("RECONNECTING")}
           onMouseEnter={() => {
             if (compact && !reduced) void video.current?.play().catch(() => {});
           }}
@@ -159,11 +227,24 @@ export function MediaStage({
       )}
       <div className="media-top">
         <span
-          className={`media-badge ${live && status === "PLAYING" ? "live" : ""}`}
+          className={`media-badge ${live && status === "PLAYING" && playingSource === sourceKey && liveSource === sourceKey ? "live" : ""}`}
         >
           <i />
-          {mediaLabel(source)}
-          {live && status !== "PLAYING" ? " · NOT CONNECTED" : ""}
+          {source.sourceType === "browser_camera" && !cameraStarted
+            ? cameraBusy
+              ? "Connecting camera"
+              : "Camera off"
+            : live
+              ? error || source.status === "unavailable"
+                ? "Offline"
+                : status === "PLAYING" &&
+                    playingSource === sourceKey &&
+                    liveSource === sourceKey
+                  ? "LIVE"
+                  : status === "RECONNECTING"
+                    ? "Reconnecting"
+                    : "Connecting"
+              : mediaLabel(source)}
         </span>
         <span className="media-clock">
           {String(Math.floor(time / 60)).padStart(2, "0")}:
@@ -177,7 +258,7 @@ export function MediaStage({
             <h2>{name}</h2>
             <p>
               {source.evidence === "illustrative"
-                ? "Illustrative replay · not the source of the indexed Omen"
+                ? "Reference footage · not publication evidence"
                 : "Configured source · not independently attested"}
             </p>
           </div>
@@ -186,7 +267,7 @@ export function MediaStage({
               identity={omen.sequence}
               className={`media-omen ${omen.value.toLowerCase()}`}
             >
-              <span>INDEXED OMEN #{omen.sequence}</span>
+              <span>OMEN #{omen.sequence}</span>
               <strong>{omen.value}</strong>
             </StateReveal>
           )}
@@ -202,13 +283,13 @@ export function MediaStage({
           <span>BUY</span>
         </div>
       )}
-      {status === "LOADING" &&
+      {["LOADING", "RECONNECTING"].includes(status) &&
         source.status === "available" &&
         source.sourceType === "recorded_video" &&
         !compact &&
         !error && (
           <span className="media-loading" role="status">
-            Loading replay…
+            {live ? "Connecting to stream…" : "Loading video…"}
           </span>
         )}
       {(error || source.status === "unavailable") && (
@@ -234,11 +315,11 @@ export function MediaStage({
         <div className="media-tools">
           {source.sourceType === "browser_camera" && !cameraStarted && (
             <button
-              disabled={source.status !== "available"}
+              disabled={source.status !== "available" || cameraBusy}
               onClick={() => void camera()}
               type="button"
             >
-              Enable camera
+              {cameraBusy ? "Connecting…" : "Enable camera"}
             </button>
           )}
           <button

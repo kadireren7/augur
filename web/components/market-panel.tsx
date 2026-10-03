@@ -11,6 +11,9 @@ import { AugurContractClient } from "@/lib/contracts";
 import { executeApprovalClick } from "@/lib/market-actions";
 import type { MarketView, OmenValue, TransactionFeedback } from "@/lib/types";
 import { walletError } from "@/lib/wallet-errors";
+import { estimatePayout } from "@/lib/payout-estimate";
+import { authHeaders } from "@/lib/auth-headers";
+import { AnimatedAmount } from "@/components/animated-amount";
 import type { EIP1193Provider } from "viem";
 
 const outcomes: OmenValue[] = ["BUY", "HOLD", "SELL"];
@@ -55,10 +58,16 @@ export function MarketPanel({
   } | null>(null);
   const [positionError, setPositionError] = useState("");
   useEffect(() => {
-    if (market?.mode !== "CONTRACT" || !session.address) return;
+    if (
+      market?.mode !== "CONTRACT" ||
+      !session.authenticated ||
+      !session.address
+    )
+      return;
     let disposed = false;
     void fetch(`/api/markets/${market.id}/position?wallet=${session.address}`, {
       cache: "no-store",
+      signal: AbortSignal.timeout(5000),
     })
       .then(async (response) => {
         const body = await response.json();
@@ -87,6 +96,7 @@ export function MarketPanel({
     market?.id,
     market?.mode,
     session.address,
+    session.authenticated,
     predictionFeedback.phase,
     settlementFeedback.phase,
   ]);
@@ -152,7 +162,9 @@ export function MarketPanel({
         <p className="empty">No active market.</p>
       </section>
     );
-  const position = market.positions[session.sessionId];
+  const position = session.authenticated
+    ? market.positions[session.sessionId]
+    : undefined;
 
   async function localAction(
     action: "approve" | "predict" | "claim" | "refund",
@@ -166,7 +178,7 @@ export function MarketPanel({
           : { action, sessionId: session.sessionId };
     const response = await fetch(`/api/markets/${market!.id}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: await authHeaders(session),
       body: JSON.stringify(body),
     });
     const result = await response.json();
@@ -335,8 +347,9 @@ export function MarketPanel({
     Number.isSafeInteger(amount) && amount >= 1 && amount <= 1_000_000;
   const predictionOpen = market.state === "OPEN" && remaining > 0;
   const walletUnavailable =
-    contractMode &&
-    (!session.authenticated || !session.address || session.chainId !== 10143);
+    !session.authenticated ||
+    (contractMode && (!session.address || session.chainId !== 10143));
+  const estimate = estimatePayout(market, outcome, amount);
   const countdown =
     market.state === "OPEN"
       ? clock === null
@@ -371,33 +384,33 @@ export function MarketPanel({
   }
 
   return (
-    <section className="panel market-terminal">
+    <section
+      className="panel market-terminal"
+      data-contract-mode={contractMode}
+    >
       <div className="panel-heading">
         <h2>Next Omen market</h2>
-        <span className="mode-badge warning">
-          {contractMode ? "Contract mode" : "Local demo mode"}
-        </span>
-      </div>
-      <div className="market-meta">
         <StateReveal identity={market.state}>
-          <span className={`market-state ${market.state.toLowerCase()}`}>
-            State: <strong>{market.state}</strong>
+          <span className={`mode-badge ${market.state.toLowerCase()}`}>
+            {market.state}
           </span>
         </StateReveal>
-        <span>
+      </div>
+      <div className="market-meta">
+        <span
+          className={
+            market.state === "OPEN" && remaining > 0 && remaining < 30000
+              ? "countdown-urgent"
+              : ""
+          }
+        >
           Countdown: <strong>{countdown}</strong>
         </span>
         <span>
-          Locks:{" "}
-          <time>
-            {new Date(market.locksAt).toLocaleTimeString("en-GB", {
-              timeZone: "UTC",
-            })}{" "}
-            UTC
-          </time>
-        </span>
-        <span>
-          Total: <strong>{formatAugd(market.totalPool)} AUGD</strong>
+          Total pool:{" "}
+          <strong>
+            <AnimatedAmount value={market.totalPool} /> AUGD
+          </strong>
         </span>
       </div>
       <div className="outcome-grid">
@@ -406,13 +419,17 @@ export function MarketPanel({
             whileTap={{ scale: 0.97 }}
             aria-pressed={outcome === value}
             className={`outcome-button ${value.toLowerCase()} ${outcome === value ? "selected" : ""}`}
-            disabled={!predictionOpen}
             key={value}
             onClick={() => setOutcome(value)}
             type="button"
           >
             <strong>{value}</strong>
-            <span>{formatAugd(market.pools[value])} AUGD</span>
+            <span>
+              <AnimatedAmount value={market.pools[value]} /> AUGD
+            </span>
+            <small>
+              {poolPercentage(market.pools[value], market.totalPool)}% of pool
+            </small>
             <motion.i
               className="pool-bar"
               initial={false}
@@ -425,7 +442,7 @@ export function MarketPanel({
         ))}
       </div>
       <label className="field">
-        Amount (demo tokens)
+        Your stake · AUGD
         <input
           min="1"
           max="1000000"
@@ -439,6 +456,38 @@ export function MarketPanel({
           </small>
         )}
       </label>
+      <div className="payout-estimate" aria-live="polite">
+        <span>
+          {predictionOpen
+            ? `If ${outcome} wins`
+            : `Hypothetical ${outcome} stake`}
+        </span>
+        <StateReveal identity={`${outcome}-${amount}-${market.totalPool}`}>
+          <strong
+            title={estimate ? `${formatAugd(estimate.payout)} AUGD` : undefined}
+          >
+            {estimate
+              ? formatAugd(estimate.payout).replace(/(\.\d{4})\d+$/, "$1")
+              : "—"}{" "}
+            AUGD
+          </strong>
+        </StateReveal>
+        <small>
+          {estimate
+            ? `${Number(estimate.shareBasisPoints) / 100}% of resulting winning pool`
+            : "Enter a valid stake"}{" "}
+          · includes your new stake; not a guaranteed payout.
+        </small>
+      </div>
+      {!session.authenticated && (
+        <button
+          className="button login-market"
+          type="button"
+          onClick={session.connect}
+        >
+          Log in to take a position
+        </button>
+      )}
       <div className="button-row">
         <button
           className="button secondary"
@@ -517,10 +566,12 @@ export function MarketPanel({
       )}
       {!contractUnavailable && walletUnavailable && (
         <p className="muted">
-          Connect your wallet on Monad Testnet 10143 to use contract controls.
+          {session.authenticated
+            ? "Switch your wallet to Monad Testnet 10143."
+            : "Public market data remains available without login."}
         </p>
       )}
-      {contractMode && session.address && (
+      {contractMode && session.authenticated && session.address && (
         <div className="wallet-position">
           <p className="eyebrow">Your onchain position</p>
           {chainPosition?.account === session.address &&
@@ -545,6 +596,14 @@ export function MarketPanel({
       {transactionStatus("PREDICTION", predictionFeedback)}
       {transactionStatus("SETTLEMENT", settlementFeedback)}
       <PayoutGuide />
+      <details className="technical-details">
+        <summary>Market details</summary>
+        <p>
+          Market #{market.id} · {contractMode ? "Contract mode" : "Simulation"}.
+          Lock: {new Date(market.locksAt).toISOString()}. Pool share describes
+          stake distribution, not a calibrated probability.
+        </p>
+      </details>
     </section>
   );
 }

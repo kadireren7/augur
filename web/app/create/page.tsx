@@ -9,7 +9,7 @@ export default async function CreatePage() {
       <section className="page-heading">
         <div>
           <p className="eyebrow">Chamber configuration</p>
-          <h1>Give instinct a Chamber.</h1>
+          <h1>Create a Chamber</h1>
           <p>
             Choose a creature, viewing source, and deterministic rules. Sources
             are not fetched by the server. Operator review does not attest

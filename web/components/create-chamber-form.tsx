@@ -5,6 +5,7 @@ import { useMemo, useState, type FormEvent } from "react";
 
 import { useSession } from "@/components/providers";
 import { AugurContractClient } from "@/lib/contracts";
+import { authHeaders } from "@/lib/auth-headers";
 import type { ChamberView } from "@/lib/types";
 import type { EIP1193Provider } from "viem";
 
@@ -41,6 +42,10 @@ export function CreateChamberForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!session.authenticated) {
+      session.connect();
+      return;
+    }
     setState("PENDING");
     setMessage("Validating constrained configuration…");
     const values = new FormData(event.currentTarget);
@@ -67,7 +72,7 @@ export function CreateChamberForm({
       try {
         const response = await fetch("/api/chambers/prepare", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: await authHeaders(session),
           body: JSON.stringify(input),
         });
         const prepared = await response.json();
@@ -100,7 +105,7 @@ export function CreateChamberForm({
         }
         const preparedResponse = await fetch("/api/chambers/prepare", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: await authHeaders(session),
           body: JSON.stringify(input),
         });
         const prepared = await preparedResponse.json();
@@ -148,7 +153,7 @@ export function CreateChamberForm({
     }
     const response = await fetch("/api/chambers", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: await authHeaders(session),
       body: JSON.stringify(input),
     });
     const body = await response.json();
@@ -168,7 +173,7 @@ export function CreateChamberForm({
     setMessage("Applying local validation policy…");
     const response = await fetch(`/api/chambers/${created.slug}/status`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: await authHeaders(session),
       body: JSON.stringify({ actor: owner, status: "ACTIVE" }),
     });
     const body = await response.json();
@@ -212,7 +217,7 @@ export function CreateChamberForm({
         <select name="species">
           <option>Hamster</option>
           <option>Fish</option>
-          <option>Turtle</option>
+          <option value="Turtle">Tortoise</option>
         </select>
       </label>
       <label className="field">
@@ -282,7 +287,7 @@ export function CreateChamberForm({
           }}
           value={sourceMode}
         >
-          <option value="FIXTURE_REPLAY">Fixture / replay</option>
+          <option value="FIXTURE_REPLAY">Deterministic reference</option>
           <option value="UPLOADED_CLIP">
             Controlled uploaded clip reference
           </option>
@@ -353,17 +358,29 @@ export function CreateChamberForm({
           required
         />
       </label>
-      <dl className="facts">
-        <div>
-          <dt>Owner</dt>
-          <dd className="hash">{owner}</dd>
-        </div>
-        <div>
-          <dt>Creator stake</dt>
-          <dd>Not required in this prototype</dd>
-        </div>
-      </dl>
-      <button className="button" disabled={state === "PENDING"} type="submit">
+      <details className="technical-details">
+        <summary>Registration details</summary>
+        <dl className="facts">
+          <div>
+            <dt>Owner</dt>
+            <dd className="hash">{owner}</dd>
+          </div>
+          <div>
+            <dt>Creator stake</dt>
+            <dd>No registration stake required</dd>
+          </div>
+        </dl>
+      </details>
+      {!session.authenticated && (
+        <button className="button" type="button" onClick={session.connect}>
+          Log in to create a Chamber
+        </button>
+      )}
+      <button
+        className="button"
+        disabled={state === "PENDING" || !session.authenticated}
+        type="submit"
+      >
         {state === "PENDING"
           ? "Validating…"
           : indexedMode && !permissionlessEnabled
