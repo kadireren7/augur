@@ -8,7 +8,7 @@ import { ProofPanel } from "@/components/proof-panel";
 import { SocialPanel } from "@/components/social-panel";
 import type { ChamberView } from "@/lib/types";
 
-export function ChamberClient({ initial }: { initial: ChamberView }) {
+export function ChamberClient({ initial, dataMode }: { initial: ChamberView; dataMode: "LOCAL" | "ENVIO" }) {
   const [chamber, setChamber] = useState(initial);
   const [advanceError, setAdvanceError] = useState("");
   const refresh = useCallback(async () => {
@@ -29,7 +29,7 @@ export function ChamberClient({ initial }: { initial: ChamberView }) {
     <div className="page-shell">
       <section className="page-heading">
         <div><p className="eyebrow">{chamber.creature.species} · {chamber.id}</p><h1>{chamber.creature.name}&apos;s Chamber</h1><p>{chamber.creature.description}</p></div>
-        <div className="mode-stack"><span className="mode-badge warning">{chamber.sourceMode} · NOT LIVE</span><span className="status active">{chamber.status}</span></div>
+        <div className="mode-stack"><span className="mode-badge">Data: {dataMode}</span><span className="mode-badge warning">{chamber.sourceMode} · NOT LIVE</span><span className="status active">{chamber.status}</span></div>
       </section>
       <div className="chamber-layout">
         <div className="main-column">
@@ -48,7 +48,7 @@ export function ChamberClient({ initial }: { initial: ChamberView }) {
             <article key={chamber.latestOmen?.sequence ?? "awaiting"} aria-live="polite" className={`signal omen-card ${chamber.latestOmen?.value.toLowerCase() ?? ""}`}><span>{chamber.latestOmen ? `Omen #${chamber.latestOmen.sequence}` : "No Omen"}</span><strong>{chamber.latestOmen?.value ?? "—"}</strong><small>{chamber.latestOmen ? new Date(chamber.latestOmen.observedAt).toLocaleString() : "Unpublished"}</small></article>
           </section>
           <MarketPanel market={displayMarket} onChanged={refresh} />
-          {chamber.proof ? <ProofPanel proof={chamber.proof} /> : <section className="panel"><h2>Proof of Omen</h2><p className="empty">No provenance manifest exists until a valid Omen is produced.</p></section>}
+          {chamber.proof ? <ProofPanel proof={chamber.proof} /> : <section className="panel"><h2>Proof of Omen</h2><p className="empty">{chamber.latestOmen ? "An Omen commitment is available, but the full offchain provenance manifest is not available through this data source." : "No provenance manifest is available yet."}</p></section>}
           {chamber.proof && <p><Link href={`/chambers/${chamber.slug}/proof`}>Open full provenance record →</Link></p>}
         </div>
         <aside><SocialPanel chamberId={chamber.id} /></aside>

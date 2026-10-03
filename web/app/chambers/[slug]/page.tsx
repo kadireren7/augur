@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 
 export default async function ChamberPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const chamber = await getDataSource().getChamber(slug);
+  const source = getDataSource();
+  const chamber = await source.getChamber(slug);
   if (!chamber) notFound();
-  return <ChamberClient initial={chamber} />;
+  return <ChamberClient initial={chamber} dataMode={source.mode} />;
 }

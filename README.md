@@ -154,6 +154,9 @@ The visual system uses shared CSS tokens, lightweight SVGs, and CSS transitions 
 
 ## Current boundaries
 
+See the [final submission audit](docs/SUBMISSION-AUDIT.md) for the live-data checks
+and remaining indexed amount, mobile layout, and media-control presentation issues.
+
 - Camera extraction and live animal streaming are not implemented; controlled trajectory fixtures are labeled.
 - Only Next Omen markets are implemented. Battle scores are virtual PnL, not animal-managed funds or a battle betting market.
 - DemoToken is strictly a test asset. Contracts have not received an external security audit.
