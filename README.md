@@ -1,6 +1,6 @@
 # Augur
 
-**Watch instinct. Take a position.**
+**The next move. Your position.**
 
 Augur is a creature prediction exchange: declared observations pass through deterministic behavior rules to produce BUY, HOLD, or SELL **Omens**. Participants stake AUGD on the next qualifying signal; authorized publication resolves the market on Monad. Every Omen binds a creature, sequence, ruleset, and provenance commitment. The animal never trades or holds funds.
 
@@ -10,15 +10,15 @@ Augur is a creature prediction exchange: declared observations pass through dete
 
 ## The viewing rooms
 
-Hamster has a real indexed Monad Testnet Chamber. Fish and Turtle have recorded viewing rooms and local deterministic demonstrations—not fabricated onchain markets. Contract data and media mode are separate: **LIVE CONTRACT** means deployed contract records, never a claim that an illustrative video is live.
+Pablo (Hamster) has a real indexed Monad Testnet Chamber. Bubbles (Fish) and Turbo (land Tortoise) have complete recorded viewing rooms, rules and reference histories—not fabricated onchain markets. These are curated display identities, not names decoded from onchain metadata. One player status distinguishes media from indexed market records.
 
-![Hamster, Fish and Turtle discovery, with honest contract/replay labels](docs/images/discovery.png)
+![Pablo, Bubbles and Turbo discovery, with honest contract/replay labels](docs/images/discovery.png)
 
 - **Recorded replay:** licensed, bundled creature footage, with source credits. It is illustrative and does not attest to the indexed Omen.
 - **Live source:** a configured public HLS stream or an explicitly enabled browser camera. No live stream is supplied by this repository. Camera video is not recorded or uploaded by the player.
 - **Simulation:** deterministic observations and local market cycles, labeled separately. Video playback does not automatically perform computer vision, generate an Omen, or publish a transaction.
 
-[Media credits and licenses](web/public/media/CREDITS.md) · [Fish replay](docs/images/fish.png) · [Turtle replay](docs/images/turtle.png)
+[Media credits and licenses](web/public/media/CREDITS.md) · [Bubbles replay](docs/images/fish.png) · [Turbo land-tortoise replay](docs/images/turtle.png)
 
 ## Inside a Chamber
 
@@ -26,7 +26,9 @@ The viewing stage dominates the page. Published behavior, Omen, market state, po
 
 ![Real indexed Chamber — replay stage, published BUY Omen, market controls and partial provenance](docs/images/chamber.png)
 
-Motion follows the product: scroll-linked viewing expansion, route entry/exit, editorial reveals, Omen/state transitions, pool bars, transaction feedback, battle introductions, and reaction bursts. Reduced-motion preferences disable spatial animation and automatic replay playback.
+The exchange panel groups pool shares, lock countdown, stake, estimated payout and transaction controls alongside the feed. Pool shares describe stake distribution, not calibrated probabilities. Motion follows real updates: exact-integer pool interpolation, outcome selection, Omen/state transitions, transaction feedback and reaction bursts. Reduced motion disables spatial effects and automatic replay playback.
+
+Payout estimates include your additional stake in both pools: a new 1 AUGD BUY stake against a 10 AUGD total / 5 AUGD BUY pool estimates **11 / 6 = 1.8333 AUGD**, not 2 AUGD. The estimate is not a guarantee; subsequent stakes change it.
 
 ## How the money moves
 
@@ -101,7 +103,11 @@ flowchart TD
 
 Viewing and oracle capture are separate boundaries. Protocol truth remains in Monad contracts; Envio serves projections. Supabase stores creature/Chamber metadata, media descriptors, replay records, chat, and reactions. It does not duplicate balances, stakes, Omens, or settlement. SQLite remains the local adapter. No private camera footage is stored.
 
-The [migration and production adapter](supabase/README.md) are implemented and tested against disposable local Postgres, with server-only access, RLS and atomic social rate limits. **Hosted Supabase connectivity is not verified without credentials.** Vercel refuses a SQLite production fallback; database failures are explicit.
+The [migrations and production adapter](supabase/README.md) are implemented and tested against disposable local Postgres, including public reads, cross-user RLS, immutable identity fields and social rate limits. Privy bearer tokens are verified server-side before a server-held Supabase Auth session is issued for that identity. Browser wallet addresses and arbitrary session IDs cannot authenticate product writes. **Hosted Supabase Auth/database connectivity is not verified without credentials.** Vercel refuses a SQLite production fallback; database failures are explicit.
+
+Public markets, media, history and proofs require no login. Prediction, approval, settlement, creation, chat, reactions, profiles and saved Chambers require authenticated identity. Social/account operations additionally need configured Supabase. No guest success is substituted when it is unavailable.
+
+Loading shells stream before data completes. Envio snapshots deduplicate concurrent requests with a short verified-data cache; failures are evicted. Viewing metadata, media and wallet initialization do not block market rendering. Requests have bounded timeouts; inactive tabs do not continually poll.
 
 ## Run locally
 
@@ -137,17 +143,19 @@ Open `http://localhost:3010/chambers/indexed-9d6541b7a855bf7c`. The demo command
 | `ALCHEMY_MONAD_RPC_URL` | Preferred server-only RPC |
 | `MONAD_RPC_URL` | Generic server RPC fallback |
 | `ENVIO_GRAPHQL_URL` | Server indexed reads; public HTTPS service required on Vercel |
-| `SUPABASE_URL` | Server database project endpoint |
-| `SUPABASE_SECRET_KEY` | Server-only database key; legacy `SUPABASE_SERVICE_ROLE_KEY` also supported |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL; legacy server `SUPABASE_URL` remains accepted by the adapter |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public API key; RLS restricts access |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only Auth/admin key; `SUPABASE_SECRET_KEY` also supported |
+| `LIVE_STREAM_URL` | Optional public HTTPS HLS playback URL for Pablo; never an ingest/signing secret |
 | `CHAINLINK_CRE_WORKFLOW_ID` | Set only after a real deployment exists; currently unset |
 
 Never commit `.env`, credentials, signing keys, or auth files. Do not place server RPC/database keys in `NEXT_PUBLIC_*`.
 
 ## Production deployment
 
-The Vercel project **augur** is linked, Node 24 and frozen-lockfile settings are prepared, and the existing public contract/Privy configuration plus server RPC values were configured without printing them. The production attempt stopped at its configuration guard: missing **public HTTPS `ENVIO_GRAPHQL_URL`**, **`SUPABASE_URL`**, and **`SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY`**. There is **no working production URL yet**.
+The Vercel project **augur** is linked, Node 24 and frozen-lockfile settings are prepared, and the existing public contract/Privy configuration plus server RPC values were configured without printing them. Production remains blocked by a public HTTPS **`ENVIO_GRAPHQL_URL`**, **`NEXT_PUBLIC_SUPABASE_URL`**, **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** and **`SUPABASE_SERVICE_ROLE_KEY`**. The earlier deployment stopped at its configuration guard. This correction pass does not deploy a partially configured product. There is **no working production URL yet**.
 
-Apply the Supabase migration, configure those services in Vercel's production environment, and run:
+Apply both Supabase migrations in filename order, configure those services in Vercel's production environment, and run:
 
 ```bash
 cd web
@@ -188,7 +196,7 @@ Pillow is required only for GIF export. Raw capture frames stay ignored.
 ## Honest limits
 
 - Testnet, not mainnet. AUGD is a demo asset. No fee or treasury.
-- Hamster contract data is real; Fish/Turtle viewing rooms are replays/local demonstrations.
+- Pablo contract data is real; Bubbles and Turbo have recorded rooms and no funded contract markets. Turbo uses land-tortoise footage.
 - Bundled video is illustrative, not the smoke Omen's evidence. Full indexed offchain manifests are unavailable; real publication commitments remain visible.
 - Browser camera/HLS viewing does not itself feed the oracle, attest source honesty, or publish Omens.
 - Permissionless registration is disabled in the deployed policy. Creation prepares offchain configuration for authorized operator review.
