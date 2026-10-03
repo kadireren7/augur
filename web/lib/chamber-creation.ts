@@ -3,37 +3,78 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import type { ChamberCreationInput, OmenValue } from "@/lib/types";
+import { safeMediaUrl } from "@/lib/media";
 
 const localIdentity = /^local-[a-zA-Z0-9-]{8,100}$/;
 const address = /^0x[0-9a-fA-F]{40}$/;
-const mediaReference = /^(fixture|upload|webcam):\/\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
+const mediaReference =
+  /^(fixture|upload|webcam):\/\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
-export const chamberCreationSchema = z.object({
-  name: z.string().trim().min(1).max(48).regex(/^[\p{L}\p{N}][\p{L}\p{N} .'-]*$/u),
-  species: z.enum(["Hamster", "Fish", "Turtle"]),
-  description: z.string().trim().max(280).optional().default(""),
-  mediaReference: z.string().trim().max(160).regex(mediaReference),
-  sourceMode: z.enum(["FIXTURE_REPLAY", "UPLOADED_CLIP", "LIVE_ADAPTER"]),
-  rulesetTemplate: z.enum(["ZONE_STANDARD", "ZONE_INVERTED", "DIRECTIONAL"]),
-  movementThreshold: z.number().min(0.001).max(1),
-  confidenceThreshold: z.number().min(0.5).max(1),
-  asset: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{2,12}$/),
-  ownerId: z.string().refine((value) => address.test(value) || localIdentity.test(value)),
-  publisher: z.string().refine((value) => address.test(value) || localIdentity.test(value)),
-}).superRefine((value, context) => {
-  const expectedScheme = {
-    FIXTURE_REPLAY: "fixture://",
-    UPLOADED_CLIP: "upload://",
-    LIVE_ADAPTER: "webcam://",
-  }[value.sourceMode];
-  if (!value.mediaReference.startsWith(expectedScheme)) {
-    context.addIssue({
-      code: "custom",
-      path: ["mediaReference"],
-      message: `source mode requires a ${expectedScheme} reference`,
-    });
-  }
-});
+export const chamberCreationSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1)
+      .max(48)
+      .regex(/^[\p{L}\p{N}][\p{L}\p{N} .'-]*$/u),
+    species: z.enum(["Hamster", "Fish", "Turtle"]),
+    description: z.string().trim().max(280).optional().default(""),
+    mediaReference: z.string().trim().max(160).regex(mediaReference),
+    sourceMode: z.enum(["FIXTURE_REPLAY", "UPLOADED_CLIP", "LIVE_ADAPTER"]),
+    rulesetTemplate: z.enum(["ZONE_STANDARD", "ZONE_INVERTED", "DIRECTIONAL"]),
+    movementThreshold: z.number().min(0.001).max(1),
+    confidenceThreshold: z.number().min(0.5).max(1),
+    asset: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z0-9]{2,12}$/),
+    ownerId: z
+      .string()
+      .refine((value) => address.test(value) || localIdentity.test(value)),
+    publisher: z
+      .string()
+      .refine((value) => address.test(value) || localIdentity.test(value)),
+    viewingSource: z
+      .object({
+        sourceType: z.enum([
+          "live_hls",
+          "browser_camera",
+          "recorded_video",
+          "fixture",
+        ]),
+        sourceUrl: z.string().max(2048).refine(safeMediaUrl).nullable(),
+      })
+      .optional(),
+  })
+  .superRefine((value, context) => {
+    const expectedScheme = {
+      FIXTURE_REPLAY: "fixture://",
+      UPLOADED_CLIP: "upload://",
+      LIVE_ADAPTER: "webcam://",
+    }[value.sourceMode];
+    if (!value.mediaReference.startsWith(expectedScheme)) {
+      context.addIssue({
+        code: "custom",
+        path: ["mediaReference"],
+        message: `source mode requires a ${expectedScheme} reference`,
+      });
+    }
+    if (value.viewingSource) {
+      const { sourceType, sourceUrl } = value.viewingSource;
+      if (
+        (["live_hls", "recorded_video"].includes(sourceType) && !sourceUrl) ||
+        (["fixture", "browser_camera"].includes(sourceType) &&
+          sourceUrl !== null)
+      )
+        context.addIssue({
+          code: "custom",
+          path: ["viewingSource"],
+          message: "Source type and URL do not match",
+        });
+    }
+  });
 
 export const RULESET_MAPPINGS: Record<
   ChamberCreationInput["rulesetTemplate"],
@@ -45,7 +86,11 @@ export const RULESET_MAPPINGS: Record<
 };
 
 function canonical(value: Record<string, unknown>): string {
-  return JSON.stringify(Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))));
+  return JSON.stringify(
+    Object.fromEntries(
+      Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
+    ),
+  );
 }
 
 export function prepareChamber(input: unknown) {
@@ -63,6 +108,7 @@ export function prepareChamber(input: unknown) {
     name: value.name,
     ownerId: value.ownerId,
     species: value.species,
+    ...(value.viewingSource ? { viewingSource: value.viewingSource } : {}),
   };
   const digest = (payload: Record<string, unknown>) =>
     createHash("sha256").update(canonical(payload)).digest("hex");
@@ -73,6 +119,7 @@ export function prepareChamber(input: unknown) {
     mediaReference: value.mediaReference,
     rulesetHash,
     sourceMode: value.sourceMode,
+    ...(value.viewingSource ? { metadataHash } : {}),
   });
   return {
     value,
@@ -88,6 +135,9 @@ export function prepareChamber(input: unknown) {
     contractMetadataHash: `0x${metadataHash}` as `0x${string}`,
     contractRulesetHash: `0x${rulesetHash}` as `0x${string}`,
     contractConfigHash: `0x${configHash}` as `0x${string}`,
-    slug: `${value.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${configHash.slice(0, 6)}`,
+    slug: `${value.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")}-${configHash.slice(0, 6)}`,
   };
 }

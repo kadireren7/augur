@@ -132,6 +132,7 @@ export type LocalChamberView = Omit<ChamberView, "activeMarket" | "marketHistory
 };
 
 export interface ChamberCreationInput {
+  viewingSource?: {sourceType: "live_hls" | "browser_camera" | "recorded_video" | "fixture"; sourceUrl: string | null};
   name: string;
   species: Species;
   description?: string;

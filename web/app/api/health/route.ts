@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getPersistence } from "@/lib/database";
+import { checkProductHealth } from "@/lib/product-repository";
 import { checkEnvioHealth } from "@/lib/envio-health";
 import { checkRpcHealth } from "@/lib/rpc";
 import { getServerConfig } from "@/lib/server-config";
@@ -31,7 +31,7 @@ export async function GET() {
       alchemy: Boolean(process.env.ALCHEMY_MONAD_RPC_URL),
       chainlinkCre: Boolean(process.env.CHAINLINK_CRE_WORKFLOW_ID),
     },
-    database: getPersistence().health(),
+    database: await checkProductHealth(),
     lastOracleAttempt: process.env.AUGUR_ORACLE_DB_PATH ? "configured journal; inspect through oracle service" : null,
     latestSequences: Object.fromEntries(
       store.listChambers().map((chamber) => [chamber.id, chamber.latestOmen?.sequence ?? null]),

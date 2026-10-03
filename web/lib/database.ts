@@ -40,12 +40,28 @@ export class SqlitePersistence implements ApplicationPersistence {
         created_at TEXT NOT NULL
       );
       CREATE INDEX IF NOT EXISTS reactions_by_chamber ON reactions(chamber_id);
+      CREATE TABLE IF NOT EXISTS product_records (kind TEXT NOT NULL, chamber_id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(kind, chamber_id));
     `);
   }
 
   loadChambers(): ChamberView[] {
     const rows = this.database.prepare("SELECT payload FROM created_chambers ORDER BY created_at").all() as Array<{ payload: string }>;
     return rows.map((row) => JSON.parse(row.payload) as ChamberView);
+  }
+
+  loadProductRecord(kind: "metadata" | "media", chamberId: string): unknown | null {
+    const row = this.database.prepare("SELECT payload FROM product_records WHERE kind = ? AND chamber_id = ?").get(kind, chamberId) as {payload: string} | undefined;
+    return row ? JSON.parse(row.payload) : null;
+  }
+
+  saveProductRecords(chamberId: string, metadata: unknown, media: unknown): void {
+    this.database.exec("BEGIN");
+    try {
+      const statement = this.database.prepare("INSERT INTO product_records(kind, chamber_id, payload) VALUES(?, ?, ?) ON CONFLICT(kind, chamber_id) DO UPDATE SET payload=excluded.payload");
+      statement.run("metadata", chamberId, JSON.stringify(metadata));
+      statement.run("media", chamberId, JSON.stringify(media));
+      this.database.exec("COMMIT");
+    } catch (error) {this.database.exec("ROLLBACK"); throw error;}
   }
 
   saveChamber(chamber: ChamberView): void {
@@ -120,6 +136,7 @@ declare global {
 }
 
 export function getPersistence(): SqlitePersistence {
+  if (process.env.VERCEL === "1") throw new Error("SQLite is local-only. Configure production product persistence.");
   globalThis.__augurPersistence ??= new SqlitePersistence();
   return globalThis.__augurPersistence;
 }

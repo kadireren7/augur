@@ -12,6 +12,11 @@ web/node_modules/
 web/.next/
 web/coverage/
 web/.env.local
+web/.env*
+!web/.env.example
+.vercel/
+web/.vercel/
+.presentation-frames/
 web/*.tsbuildinfo
 web/.augur/
 indexer/node_modules/

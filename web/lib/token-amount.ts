@@ -11,3 +11,10 @@ export function formatAugd(amount: string | bigint | number): string {
   const fraction = padded.slice(-18).replace(/0+$/, "");
   return fraction ? `${whole}.${fraction}` : whole;
 }
+
+/** Display-only ratio. All accounting remains exact integers. */
+export function poolPercentage(amount: string | number, total: string | number): number {
+  const integer = (value: string | number) => typeof value === "number" ? BigInt(value) * 10n ** 18n : BigInt(value);
+  const pool = integer(total);
+  return pool === 0n ? 0 : Number(integer(amount) * 10000n / pool) / 100;
+}

@@ -380,6 +380,7 @@ declare global {
 }
 
 export function getStore(): AugurStore {
-  globalThis.__augurStore ??= new AugurStore(new Date(), getPersistence());
+  // The showcase is explicitly process-local on serverless hosts, never protocol truth.
+  globalThis.__augurStore ??= new AugurStore(new Date(), process.env.VERCEL === "1" ? undefined : getPersistence());
   return globalThis.__augurStore;
 }

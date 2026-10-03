@@ -4,8 +4,10 @@ import { ZodError } from "zod";
 import { PublicRateLimitError } from "@/lib/api-rate-limit";
 import { SocialError } from "@/lib/social";
 import { StoreError } from "@/lib/store";
+import { ProductDatabaseError } from "@/lib/product-repository";
 
 export function apiError(error: unknown): NextResponse {
+  if (error instanceof ProductDatabaseError) return NextResponse.json({error: "DATABASE_UNAVAILABLE", message: error.message}, {status: 503});
   if (error instanceof ZodError) {
     return NextResponse.json({ error: "INVALID_REQUEST", details: error.issues }, { status: 400 });
   }

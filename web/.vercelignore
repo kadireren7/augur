@@ -1,0 +1,6 @@
+.env*
+.augur/
+.next/
+node_modules/
+*.tsbuildinfo
+coverage/

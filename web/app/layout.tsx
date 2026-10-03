@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { AppProviders } from "@/components/providers";
 import { WalletStatus } from "@/components/wallet-status";
 import { SiteNav } from "@/components/site-nav";
+import { MotionShell } from "@/components/motion-system";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <SiteNav />
             <WalletStatus />
           </header>
-          <main>{children}</main>
+          <main><MotionShell>{children}</MotionShell></main>
           <footer className="site-footer"><Link className="brand" href="/">◈ AUGUR</Link><span>Observable behavior. Inspectable outcomes.</span><Link href="/health">System diagnostics ↗</Link><span>Monad Testnet · 10143</span></footer>
         </AppProviders>
       </body>

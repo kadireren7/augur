@@ -1,4 +1,4 @@
-import { getPersistence } from "@/lib/database";
+import { checkProductHealth } from "@/lib/product-repository";
 import { checkEnvioHealth } from "@/lib/envio-health";
 import { checkRpcHealth } from "@/lib/rpc";
 import { getServerConfig } from "@/lib/server-config";
@@ -10,6 +10,7 @@ export default async function HealthPage() {
   const rpc = await checkRpcHealth();
   const envio = await checkEnvioHealth();
   const config = getServerConfig();
+  const database = await checkProductHealth();
   const rows = [
     ["Web", "HEALTHY"],
     ["Data source", process.env.ENVIO_GRAPHQL_URL ? "ENVIO" : "LOCAL"],
@@ -24,7 +25,7 @@ export default async function HealthPage() {
     ["Envio", `${envio.status}${envio.lastIndexedBlock ? ` · block ${envio.lastIndexedBlock}` : ""}`],
     ["Privy", config.privyAppId ? "SDK configured" : "Local dev session"],
     ["Chainlink CRE", process.env.CHAINLINK_CRE_WORKFLOW_ID ? "Workflow ID configured; execution unverified" : "Not configured"],
-    ["Database", getPersistence().health().mode],
+    ["Database", `${database.mode} · ${database.status}`],
     ["Build", process.env.NEXT_PUBLIC_BUILD_VERSION || "development"],
   ];
   return <div className="page-shell narrow"><section className="page-heading"><div><p className="eyebrow">Developer health</p><h1>Runtime boundaries</h1><p>No endpoint value, key, token, or secret is exposed here.</p></div></section><section className="panel"><dl className="health-list">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>{rpc.error && <p className="error">{rpc.error}</p>}</section><section className="panel"><h2>Latest local oracle sequence</h2>{getStore().listChambers().map((chamber) => <p className="history-row" key={chamber.id}><strong>{chamber.id}</strong><span>{chamber.latestOmen ? `#${chamber.latestOmen.sequence}` : "No Omen"} · {chamber.sourceMode}</span></p>)}</section></div>;

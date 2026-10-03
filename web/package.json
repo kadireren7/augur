@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
+  "packageManager": "pnpm@11.2.2",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,10 +12,14 @@
     "demo:start": "node scripts/demo.mjs start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "production:check": "node scripts/production-check.mjs"
   },
+  "engines": {"node": "24.x"},
   "dependencies": {
     "@privy-io/react-auth": "3.45.0",
+    "hls.js": "^1.7.3",
+    "motion": "^14.0.0",
     "next": "16.3.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
