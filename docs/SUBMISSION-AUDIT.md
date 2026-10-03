@@ -1,82 +1,65 @@
-# Submission audit
+# Product completion audit
 
-All code and configuration blockers from the presentation audit are resolved.
-The production demo was verified against real Monad Testnet, local Envio indexing,
-Alchemy, and the configured Privy provider. No blockchain transaction was sent
-during this pass. The final authenticated Privy session check remains manual.
+The local product uses the real Monad Testnet deployment and verified local Envio projection. Production hosting remains blocked on external configuration. No blockchain transaction was sent during this product pass.
 
-## Resolved blockers
+## Completed product work
 
-| Blocker | Resolution and evidence |
+| Surface | Verified boundary |
 | --- | --- |
-| Demo startup selects local data unless manually overridden | `pnpm demo:build` and `pnpm demo:start` load ignored environment files, select the configured Envio endpoint or the existing local endpoint, and require chain 10143 plus the real indexed Chamber before launching. The actual demo process reports ENVIO. An unreachable endpoint stops startup with exit 1. |
-| Raw token amounts displayed as AUGD | Indexed amounts remain exact base-unit strings. Prediction and backing totals use BigInt; the shared formatter uses all 18 decimals. The real smoke volume `10000000000000000000` renders as `10 AUGD`. Single-wei and large-number regression tests pass. Local fixtures retain whole-token amounts. |
-| Mobile document overflow | Long identifiers and panel content wrap; the Chronicle table scrolls within its panel. All eight routes have no horizontal document overflow at 1440, 390 and 430 pixels. |
-| Fixture controls on indexed Chamber | ENVIO/Contract views omit the fixture stage, synthetic centroid and advance button. They explain that media is unavailable. Explicit local mode retains its fixture controls; backend validation is unchanged. |
-| Missing full provenance manifest | Chamber and Proof views display the real Omen, sequence, timestamp, Chamber/creature IDs, ruleset and provenance commitments. The unavailable full manifest is stated explicitly, with no source/detection integrity claim or fabricated evidence. |
+| Discovery | Media-led Hamster, Fish and Turtle categories. Hamster has real indexed contract records; Fish/Turtle are replay rooms and local demonstrations, not onchain markets. |
+| Chamber | Licensed recorded footage, published behavior/Omen, real market state, exact AUGD pools, wallet-position reads, and separate approval/prediction/settlement feedback. Footage is explicitly illustrative, not publication evidence. |
+| Media | Recorded video, public HLS and browser-camera adapters with loading/error handling, native controls and fullscreen. No live source is configured; private camera footage is not stored or uploaded. |
+| Motion | Route entry/exit, scroll reveals and linked viewing expansion, Omen/market transitions, pool transitions, battle introductions, reaction bursts and drawers. Reduced motion disables spatial effects and automatic replay playback. |
+| Payouts | All stakes form the winning pool; winners claim pro-rata. No winners means cancellation and participant refunds. No platform fee or treasury. Approval alone does not stake tokens. |
+| Creation | Creature, name, rules and media descriptors prepare content-bound offchain metadata for operator review. The deployed permissionless policy is disabled; no registration is fabricated. |
+| Chronicle / Battles / Showcase | Real indexed history and exact token formatting; explicit local boundaries for virtual battle PnL and repeated three-creature simulation. |
+| Persistence | Supabase schema, six RLS tables, server REST adapter, atomic social rate limits and prepared metadata. SQLite persists local product data. Vercel rejects SQLite fallback; configured database failure is explicit. |
+| Proof | Real indexed commitments remain visible. Full offchain manifests are explicitly unavailable, without fixture evidence or source-honesty claims. |
 
-## Integration checks
+## Real-data and safety checks
 
-- Runtime health reports ENVIO, ALCHEMY / HEALTHY, Monad chain 10143, and bytecode
-  at all six configured contracts. Addresses match committed deployment metadata.
-- Envio serves the real Chamber, BUY Omen sequence 1, resolved BUY market 1 and
-  open market 2. The indexed API preserves raw token amounts as JSON strings.
-- Approval and prediction state remain separate. The existing approval regression
-  test still requires exactly one DemoToken transaction and no market transaction.
-- An unreachable configured indexer displays an explicit data-unavailable view.
-  Fixture data is never substituted. An unavailable endpoint prevents demo startup.
-- The earlier isolated wrong-chain RPC audit returned CHAIN_MISMATCH without
-  hiding the mismatch behind fallback; the existing regression test still passes.
-- No contract, wallet signer, oracle, Envio schema or CRE workflow logic changed.
-  Battles and Showcase retain their explicit local-data boundaries.
+- Demo startup loads ignored environment configuration and selects ENVIO. It requires chain 10143 and the deployed indexed Chamber; unavailable indexing stops startup instead of selecting fixtures.
+- Local health reports ALCHEMY / HEALTHY, Monad 10143, and bytecode at all six configured contracts. A final read returned block **67920415**. The existing local indexer reports block **67576769**; it is behind the chain head, not falsely presented as a fresh camera feed.
+- The indexed Chamber renders BUY Omen sequence 1, resolved BUY market 1 and the subsequent open market. Elapsed lock time disables prediction controls. No fixture advancement control appears in contract mode.
+- Approval signing construction and its one-DemoToken-request regression remain unchanged. Approval, prediction and settlement retain distinct feedback; logged-out, wrong-chain and unconfigured contract states cannot become local writes.
+- Wallet position uses onchain read-only mappings through configured server RPC providers. No authenticated browser session or new transaction was fabricated.
+- AUGD remains integer base units internally. The shared 18-decimal formatter displays the smoke volume as **10 AUGD**, not raw wei.
+- Initial market clocks are hydration-stable; published timestamps use explicit UTC. No contract, oracle, indexer schema, CRE workflow or wallet signer was replaced.
 
 ## Validation
 
-- All 45 web tests pass, including exact amount formatting, indexed aggregation,
-  serialization and explicit indexer-failure regressions.
-- TypeScript typecheck and ESLint pass.
-- The production build passes through `pnpm demo:build` after real Envio preflight.
-- Browser checks cover discovery, indexed Chamber, Chronicle, Proof, Health,
-  creation, Showcase and battles at desktop, 390px and 430px.
-- The real Privy login form and wallet-choice control render at all three widths.
-  No uncaught page errors were observed in the successful real-data browser pass.
-- Existing README screenshots and Showcase GIF remain actual app captures;
-  relative asset references resolve. Server credentials are absent from browser
-  bundles and staged changes. Diff checks pass.
+- **60 web tests in 18 files**, TypeScript typecheck, ESLint and production build pass.
+- Oracle **19 tests** and vision **21 tests** pass.
+- Migration and SQL assertions pass in disposable local Postgres: RLS, RPC permissions, metadata binding, chat/reaction persistence and rate limits, and camera URL constraints. Hosted Supabase has not been contacted or claimed verified.
+- Browser regression covers **40 route/width combinations**: 1440px desktop, 1024px tablet, 390px and 430px mobile; discovery, indexed Chamber, Proof, Chronicle, battles, creation, Showcase, Health and both replay rooms.
+- All 40 route checks return HTTP 200, with no horizontal document overflow or uncaught page/hydration errors. Native fullscreen enters and exits successfully.
+- Browser checks include native replay playback, media failure without protocol-data substitution, category filtering, client navigation, payout drawer, local Showcase start/stop and reduced-motion accessibility. No transaction is submitted by the audit.
+- The real Privy login dialog opens. Final-origin authentication, wallet availability and reconnect remain interactive checks; opening a dialog is not authentication.
+- README screenshots and the 24-frame Showcase GIF are new captures of the running product; all 11 README asset references resolve. Media source/license credits and font licenses are included. Browser-bundle and staged credential scans and diff checks pass.
 
-## Final demo start
+## Local demo start
 
-Start the existing Envio service first, then:
+Start the existing local Envio service, then:
 
 ```bash
 cd web
 pnpm demo:build
-PORT=3007 pnpm demo:start
+PORT=3010 pnpm demo:start
 ```
 
-The verified origin is `http://localhost:3007`. Shell environment values take
-precedence, followed by web production-local configuration and the ignored root
-environment. `ENVIO_GRAPHQL_URL` can point to a configured HTTPS endpoint. The
-local default is `http://localhost:8080/v1/graphql`; it contains no credentials
-and is required to pass a real deployment/chain preflight. Ordinary `pnpm start`
-keeps standard Next.js environment behavior; use the demo command for submission.
+Verified local origin: `http://localhost:3010`. Indexed Chamber: `/chambers/indexed-9d6541b7a855bf7c`; partial proof appends `/proof`. Configured `ENVIO_GRAPHQL_URL` takes precedence over the non-secret localhost endpoint. This local default is not usable from Vercel.
 
-The live indexed route is `/chambers/indexed-9d6541b7a855bf7c` and the partial proof
-route appends `/proof`. Source mode is separate from data mode: the Chamber's
-indexed configuration can say FIXTURE while its Omen and markets are real records.
+## Production blockers and remaining manual check
 
-## Manual verification remaining
+The Vercel project is linked and deployment was attempted. Its configuration guard stopped the production build; **there is no working production URL**.
 
-On `http://localhost:3007`, use Connect with Privy to authenticate. Confirm an
-existing or embedded wallet, the visible address, Monad Testnet chain 10143,
-disconnect/reconnect, and separate approval/prediction controls on the real indexed
-Chamber. Do not interpret opening the login dialog as authenticated verification.
+Required external configuration:
 
-If Privy rejects the origin, add the exact origin to the application's allowed
-origins in its dashboard. That account setting is not inspectable from this
-repository. A deployment on a different final origin requires the same check and
-appropriate origin configuration. No new transaction is required by this audit.
+- Public HTTPS **`ENVIO_GRAPHQL_URL`** serving the real Monad projection.
+- **`SUPABASE_URL`** and server-only **`SUPABASE_SECRET_KEY`** (or `SUPABASE_SERVICE_ROLE_KEY`), with the committed migration applied.
 
-The code and real-data demo are ready for that final interactive check. Full
-offchain evidence remains unavailable rather than fabricated, and CRE remains
-authenticated-simulation verified with deployment access pending.
+No hosted indexer or database was invented. See [production checklist](PRODUCTION.md) and [database setup](../supabase/README.md).
+
+After a successful deployment, allowlist its exact origin in Privy if required. Manually verify login, existing/embedded wallet, Monad Testnet 10143, disconnect/reconnect and separate transaction controls. No production-origin authenticated verification is claimed.
+
+CRE remains authenticated-simulation verified with deployment access pending. The local product is prepared for presentation; hosted production and its final Privy check are not yet submission-verified.
