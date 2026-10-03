@@ -32,7 +32,7 @@ export function ProofPanel({ proof, detailed = false }: { proof: ProofView; deta
     }
   }
   return (
-    <section className="panel">
+    <section className="panel proof-panel">
       <div className="panel-heading">
         <h2>Proof of Omen</h2>
         <span className={`status ${proof.integrityVerified ? "active" : "closed"}`}>

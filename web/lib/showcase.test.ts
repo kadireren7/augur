@@ -1,4 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-09-27T12:00:00.000Z"));
+});
+afterEach(() => vi.useRealTimers());
 
 import { AugurStore } from "@/lib/store";
 

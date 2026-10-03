@@ -34,9 +34,9 @@ export function ChamberClient({ initial }: { initial: ChamberView }) {
       <div className="chamber-layout">
         <div className="main-column">
           <section className="panel fixture-stage">
-            <div className="panel-heading"><h2>Fixture media</h2><span>{chamber.sourceLabel}</span></div>
+            <div className="panel-heading"><h2>Observation chamber</h2><span className="mode-badge warning">{chamber.sourceLabel}</span></div>
             <div className="fixture-box" aria-label={chamber.observation ? `${chamber.creature.name} centroid in ${chamber.observation.zone} zone` : `${chamber.creature.name} has no observation yet`}>
-              <div className="zone-lines"><span>SELL</span><span>HOLD</span><span>BUY</span></div>
+              <div className="zone-lines"><span>SELL</span><span>HOLD</span><span>BUY</span></div><span className="stage-label">CENTROID VISUALIZATION · DETERMINISTIC REPLAY</span>
               <span className="creature-dot" style={{ left: `${chamber.fixtureFrame.x * 100}%`, top: `${chamber.fixtureFrame.y * 100}%` }} />
             </div>
             <button className="button secondary" disabled={!chamber.activeMarket} onClick={() => void advance()} type="button">Advance deterministic fixture</button>
@@ -45,7 +45,7 @@ export function ChamberClient({ initial }: { initial: ChamberView }) {
           <section className="signal-row">
             <article className="signal"><span>Observation</span><strong>{chamber.observation?.zone ?? "NONE"}</strong><small>{chamber.observation ? `${Math.round(chamber.observation.confidence * 100)}% confidence` : "Awaiting valid source input"}</small></article>
             <article className="signal"><span>Behavior</span><strong>{chamber.behavior?.type ?? "NONE"}</strong><small>{chamber.behavior ? `rules ${chamber.behavior.rulesetVersion}` : chamber.rulesetTemplate}</small></article>
-            <article className={`signal omen-card ${chamber.latestOmen?.value.toLowerCase() ?? ""}`}><span>{chamber.latestOmen ? `Omen #${chamber.latestOmen.sequence}` : "No Omen"}</span><strong>{chamber.latestOmen?.value ?? "—"}</strong><small>{chamber.latestOmen ? new Date(chamber.latestOmen.observedAt).toLocaleString() : "Unpublished"}</small></article>
+            <article key={chamber.latestOmen?.sequence ?? "awaiting"} aria-live="polite" className={`signal omen-card ${chamber.latestOmen?.value.toLowerCase() ?? ""}`}><span>{chamber.latestOmen ? `Omen #${chamber.latestOmen.sequence}` : "No Omen"}</span><strong>{chamber.latestOmen?.value ?? "—"}</strong><small>{chamber.latestOmen ? new Date(chamber.latestOmen.observedAt).toLocaleString() : "Unpublished"}</small></article>
           </section>
           <MarketPanel market={displayMarket} onChanged={refresh} />
           {chamber.proof ? <ProofPanel proof={chamber.proof} /> : <section className="panel"><h2>Proof of Omen</h2><p className="empty">No provenance manifest exists until a valid Omen is produced.</p></section>}
