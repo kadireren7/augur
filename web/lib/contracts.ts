@@ -1,12 +1,12 @@
 import {
   createPublicClient,
-  createWalletClient,
-  custom,
+  decodeFunctionData,
   encodeFunctionData,
   http,
   type Address,
   type EIP1193Provider,
   type Hash,
+  type Hex,
 } from "viem";
 
 import { clientPublicConfig } from "@/lib/config";
@@ -106,8 +106,62 @@ export interface ContractWallet {
   provider: EIP1193Provider;
 }
 
+export type TransactionSubmitted = (hash: Hash) => void;
+
+export interface PreparedContractTransaction {
+  to: Address;
+  data: Hex;
+}
+
+export interface ApprovalPreflight {
+  transaction: PreparedContractTransaction;
+  gasEstimate: bigint;
+}
+
+export type ConfirmTransaction = (hash: Hash) => Promise<void>;
+
+export function buildDemoTokenApproval(
+  tokenAddress: Address,
+  marketAddress: Address,
+  amount: bigint,
+): PreparedContractTransaction {
+  if (tokenAddress.toLowerCase() === marketAddress.toLowerCase()) {
+    throw new Error("DemoToken and NextOmenMarket addresses must be distinct");
+  }
+  const data = encodeFunctionData({
+    abi: demoTokenAbi,
+    functionName: "approve",
+    args: [marketAddress, amount],
+  });
+  const decoded = decodeFunctionData({ abi: demoTokenAbi, data });
+  if (
+    decoded.functionName !== "approve"
+    || decoded.args[0].toLowerCase() !== marketAddress.toLowerCase()
+    || decoded.args[1] !== amount
+  ) {
+    throw new Error("DemoToken approval calldata validation failed");
+  }
+  return { to: tokenAddress, data };
+}
+
+export async function submitPreparedContractTransaction(
+  wallet: ContractWallet,
+  transaction: PreparedContractTransaction,
+): Promise<Hash> {
+  return wallet.provider.request({
+    method: "eth_sendTransaction",
+    params: [{
+      from: wallet.address,
+      to: transaction.to,
+      data: transaction.data,
+    }],
+  }) as Promise<Hash>;
+}
+
 export class AugurContractClient {
   private readonly config = clientPublicConfig();
+
+  constructor(private readonly confirmTransaction?: ConfirmTransaction) {}
 
   get configured(): boolean {
     return Boolean(
@@ -127,12 +181,35 @@ export class AugurContractClient {
     );
   }
 
-  async approve(wallet: ContractWallet, amount: bigint): Promise<Hash> {
+  async approve(wallet: ContractWallet, amount: bigint, onSubmitted?: TransactionSubmitted): Promise<Hash> {
     this.requireConfigured();
-    return this.send(wallet, this.config.tokenAddress!, demoTokenAbi, "approve", [
+    const preflight = await this.validateApproval(wallet, amount);
+    return this.sendPrepared(
+      wallet,
+      preflight.transaction,
+      onSubmitted,
+    );
+  }
+
+  async validateApproval(wallet: ContractWallet, amount: bigint): Promise<ApprovalPreflight> {
+    this.requireConfigured();
+    await this.requireExpectedChain(wallet.provider);
+    const transaction = buildDemoTokenApproval(
+      this.config.tokenAddress!,
       this.config.marketAddress!,
       amount,
+    );
+    const request = {
+      from: wallet.address,
+      to: transaction.to,
+      data: transaction.data,
+    };
+    const [gasHex, result] = await Promise.all([
+      wallet.provider.request({ method: "eth_estimateGas", params: [request] }) as Promise<Hex>,
+      wallet.provider.request({ method: "eth_call", params: [request, "latest"] }) as Promise<Hex>,
     ]);
+    if (BigInt(result) !== 1n) throw new Error("DemoToken approval simulation did not return true");
+    return { transaction, gasEstimate: BigInt(gasHex) };
   }
 
   async predict(
@@ -140,23 +217,24 @@ export class AugurContractClient {
     marketId: bigint,
     outcome: OmenValue,
     amount: bigint,
+    onSubmitted?: TransactionSubmitted,
   ): Promise<Hash> {
     this.requireConfigured();
     return this.send(wallet, this.config.marketAddress!, nextOmenMarketAbi, "predict", [
       marketId,
       outcomeIndex[outcome],
       amount,
-    ]);
+    ], onSubmitted);
   }
 
-  async claim(wallet: ContractWallet, marketId: bigint): Promise<Hash> {
+  async claim(wallet: ContractWallet, marketId: bigint, onSubmitted?: TransactionSubmitted): Promise<Hash> {
     this.requireConfigured();
-    return this.send(wallet, this.config.marketAddress!, nextOmenMarketAbi, "claim", [marketId]);
+    return this.send(wallet, this.config.marketAddress!, nextOmenMarketAbi, "claim", [marketId], onSubmitted);
   }
 
-  async refund(wallet: ContractWallet, marketId: bigint): Promise<Hash> {
+  async refund(wallet: ContractWallet, marketId: bigint, onSubmitted?: TransactionSubmitted): Promise<Hash> {
     this.requireConfigured();
-    return this.send(wallet, this.config.marketAddress!, nextOmenMarketAbi, "refund", [marketId]);
+    return this.send(wallet, this.config.marketAddress!, nextOmenMarketAbi, "refund", [marketId], onSubmitted);
   }
 
   async registerCreature(
@@ -164,6 +242,7 @@ export class AugurContractClient {
     creatureId: `0x${string}`,
     species: 0 | 1 | 2,
     metadataHash: `0x${string}`,
+    onSubmitted?: TransactionSubmitted,
   ): Promise<Hash> {
     if (!this.permissionlessConfigured) throw new Error("Registry contracts are not configured");
     return this.send(
@@ -172,6 +251,7 @@ export class AugurContractClient {
       creatureRegistryAbi,
       "registerCreature",
       [creatureId, species, metadataHash, wallet.address],
+      onSubmitted,
     );
   }
 
@@ -204,6 +284,7 @@ export class AugurContractClient {
       rulesetHash: `0x${string}`;
     },
     sourceMode: 0 | 1 | 2,
+    onSubmitted?: TransactionSubmitted,
   ): Promise<Hash> {
     if (!this.permissionlessConfigured) throw new Error("Registry contracts are not configured");
     return this.send(
@@ -219,6 +300,7 @@ export class AugurContractClient {
         wallet.address,
         sourceMode,
       ],
+      onSubmitted,
     );
   }
 
@@ -228,19 +310,39 @@ export class AugurContractClient {
     abi: readonly unknown[],
     functionName: string,
     args: readonly unknown[],
+    onSubmitted?: TransactionSubmitted,
   ): Promise<Hash> {
-    const chainHex = (await wallet.provider.request({ method: "eth_chainId" })) as string;
+    return this.sendPrepared(
+      wallet,
+      { to, data: encodeFunctionData({ abi, functionName, args }) },
+      onSubmitted,
+    );
+  }
+
+  private async sendPrepared(
+    wallet: ContractWallet,
+    transaction: PreparedContractTransaction,
+    onSubmitted?: TransactionSubmitted,
+  ): Promise<Hash> {
+    await this.requireExpectedChain(wallet.provider);
+    const hash = await submitPreparedContractTransaction(wallet, transaction);
+    onSubmitted?.(hash);
+    if (this.confirmTransaction) {
+      await this.confirmTransaction(hash);
+    } else {
+      const publicClient = createPublicClient({ transport: http(this.config.rpcUrl!) });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
+      if (receipt.status !== "success") throw new Error("Transaction reverted");
+    }
+    return hash;
+  }
+
+  private async requireExpectedChain(provider: EIP1193Provider): Promise<void> {
+    const chainHex = (await provider.request({ method: "eth_chainId" })) as string;
     const actualChainId = Number.parseInt(chainHex, 16);
     if (actualChainId !== this.config.expectedChainId) {
       throw new Error(`Wrong chain: expected ${this.config.expectedChainId}, received ${actualChainId}`);
     }
-    const walletClient = createWalletClient({ transport: custom(wallet.provider) });
-    const data = encodeFunctionData({ abi, functionName, args });
-    const hash = await walletClient.sendTransaction({ account: wallet.address, chain: null, to, data });
-    const publicClient = createPublicClient({ transport: http(this.config.rpcUrl!) });
-    const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
-    if (receipt.status !== "success") throw new Error("Transaction reverted");
-    return hash;
   }
 
   private requireConfigured(): void {

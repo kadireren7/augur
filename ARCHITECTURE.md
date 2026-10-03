@@ -156,7 +156,7 @@ Alchemy remains **externally unconfigured**. The server explicitly prefers `ALCH
 
 ### Privy
 
-Privy's **real React SDK path is wired but unconfigured**. Supplying `NEXT_PUBLIC_PRIVY_APP_ID` enables login, embedded-wallet onboarding for users without a wallet, address display, and EIP-1193 transaction signing. Without it, the application uses a clearly labeled unauthenticated local dev session. No credentialed Privy login was exercised. Privy identity is not oracle authority, and chat identity remains separate from market resolution permissions.
+Privy's **real React SDK path is configured and verified**. Authentication, embedded/connected wallet availability, disconnect/reconnect, Monad Testnet chain `10143`, and EIP-1193 signing were exercised in the production web app. The live proof was `DemoToken.approve(NextOmenMarket, 1e18)` from the Privy wallet, confirmed in block `67812342` as transaction `0x0bf842f8992228d54da917523ce075aa930bad76888148ec09b637ff17d5584a`; its receipt, decoded calldata, `Approval` event, and resulting allowance were independently verified through the configured Monad RPC path. Privy initialization has explicit login, ready, and bounded error states. Privy identity is not oracle authority, and chat identity remains separate from market resolution permissions.
 
 ## High-level event schemas
 
