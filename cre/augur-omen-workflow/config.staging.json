@@ -1,0 +1,6 @@
+{
+  "workflowId": "augur-omen-validation-v1",
+  "workflowVersion": "1.0.0",
+  "chainId": 10143,
+  "omenPublisher": "0x333c7ba28b6Eec62f51d111d161fc52fd3ADAa1a"
+}

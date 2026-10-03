@@ -1,0 +1,4 @@
+local-simulation:
+  rpcs:
+    - chain-name: monad-testnet
+      url: ${NEXT_PUBLIC_MONAD_RPC_URL}

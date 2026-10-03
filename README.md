@@ -42,7 +42,7 @@ Implemented and tested locally:
 Still pending external configuration or later work:
 
 - Real live creature media and a production media/centroid adapter; the UI currently says `FIXTURE · NOT LIVE`.
-- A hosted Envio endpoint and execution through a configured Chainlink CRE transport.
+- A hosted Envio endpoint and authenticated Chainlink CRE simulation/deployment.
 - Next-trade-profitable markets and battle-winner markets; only their extensible type definitions exist today.
 - A production upload pipeline and browser camera capture; current user-created sources are safe references/adapters, not server-side arbitrary URL fetches.
 
@@ -56,11 +56,11 @@ Augur is separated into five modules:
 - `indexer/` contains the Envio schema, local code-generation configuration, and typed event projections.
 - `web/` contains the functional Next.js product layer and its local/contract/indexed data boundaries.
 
-Privy's SDK path is configured and verified for authentication, embedded/connected wallet availability, Monad Testnet chain 10143, and EIP-1193 signing. The live proof was a 1 AUGD `DemoToken.approve(NextOmenMarket, 1e18)` transaction, `0x0bf842f8992228d54da917523ce075aa930bad76888148ec09b637ff17d5584a`, confirmed in block `67812342`. The server-side Alchemy Monad RPC path is verified against chain 10143 for block, bytecode, contract read, receipt, and event-log queries; health diagnostics report the active provider and fall back only to `MONAD_RPC_URL` when Alchemy is unavailable. Envio code generation and typechecking pass against the committed Monad configuration; local Envio indexed the real Monad testnet smoke data, GraphQL returned the expected entities and resolved BUY outcome, and the web indexed-data adapter consumed that live GraphQL result. No hosted indexer is running. The CRE adapter enforces workflow/version, Chamber, sequence, provenance, replay, and timeout binding, but no real CRE client or workflow execution is claimed.
+Privy's SDK path is configured and verified for authentication, embedded/connected wallet availability, Monad Testnet chain 10143, and EIP-1193 signing. The live proof was a 1 AUGD `DemoToken.approve(NextOmenMarket, 1e18)` transaction, `0x0bf842f8992228d54da917523ce075aa930bad76888148ec09b637ff17d5584a`, confirmed in block `67812342`. The server-side Alchemy Monad RPC path is verified against chain 10143 for block, bytecode, contract read, receipt, and event-log queries; health diagnostics report the active provider and fall back only to `MONAD_RPC_URL` when Alchemy is unavailable. Envio code generation and typechecking pass against the committed Monad configuration; local Envio indexed the real Monad testnet smoke data, GraphQL returned the expected entities and resolved BUY outcome, and the web indexed-data adapter consumed that live GraphQL result. No hosted indexer is running. The real CRE SDK workflow under `cre/` validates provenance-bound Omen requests and deterministically prepares the Monad `OmenPublisher.publish(...)` call; official CLI build and focused tests pass, while CRE simulation/deployment remain blocked at the required authentication gate.
 
 ## Milestone status
 
-**Current: M7 and M8 are locally implemented and tested; the contract stack is deployed, smoke-verified, and locally indexed with Envio on Monad testnet.** User-created Chambers and social data persist in SQLite, contract mode uses guarded registry policy, and speed mode runs repeated independent Chamber cycles. The real Monad GraphQL-to-web indexed-data path and Privy login-to-wallet-to-contract-signing path passed. A hosted Envio endpoint, real CRE execution, live media ingestion, and testnet permissionless/speed-mode exercises remain outstanding.
+**Current: M7 and M8 are locally implemented and tested; the contract stack is deployed, smoke-verified, and locally indexed with Envio on Monad testnet.** User-created Chambers and social data persist in SQLite, contract mode uses guarded registry policy, and speed mode runs repeated independent Chamber cycles. The real Monad GraphQL-to-web indexed-data path and Privy login-to-wallet-to-contract-signing path passed. The real CRE workflow builds and its validation/call-construction path is tested, but authenticated CRE simulation and deployment, a hosted Envio endpoint, live media ingestion, and testnet permissionless/speed-mode exercises remain outstanding.
 
 ## Developer workflow
 
@@ -116,7 +116,7 @@ Use `VerifyDeployment.s.sol` to recheck deployment wiring, then use `SmokeSetup.
 - Python E2E uses the local publisher and market model; Monad smoke verification covers the real Solidity registry-to-claim lifecycle, while the indexed web read path has been exercised locally.
 - Privy authentication, embedded/connected wallet availability, Monad Testnet chain detection, reconnect, and a real 1 AUGD DemoToken approval were exercised. The configured server-only Alchemy Monad RPC and generic Monad fallback health paths were exercised without exposing either endpoint to the browser bundle.
 - Envio was exercised locally with Docker and Anvil, and its Monad configuration passes code generation/typechecking; no hosted endpoint is running.
-- The CRE adapter validates response binding, but no real CRE SDK transport or workflow execution was available.
+- The CRE SDK workflow builds and deterministically validates/prepares Omen publication requests. Official simulation and deployment were not executed because CRE authentication was unavailable; no live workflow ID is claimed.
 - Only Next Omen is implemented as a market. Profitability and battle markets remain planned.
 - Battle scoring runs deterministically offchain and commits final results through `BattleCoordinator`; its publisher remains a trust boundary. A battle-winner prediction market is not implemented.
 - Created Chambers, chat, and reactions persist in local SQLite. Seed fixture markets/showcase counters remain process-local, and production deployment needs a managed database adapter.
@@ -129,7 +129,7 @@ Use `VerifyDeployment.s.sol` to recheck deployment wiring, then use `SmokeSetup.
 - **M1 — Vision Engine (local core complete):** deterministic controlled-fixture tracking with a small behavior vocabulary and zone/motion detection.
 - **M2 — Proof of Omen (local core complete):** provenance linking source hash, detections, behavior, ruleset version, Omen, and verification artifacts.
 - **M3 — Monad Protocol (contracts deployed and verified):** Creature Registry, allowlisted Room Registry, Omen publication, authorization, sequencing, replay protection, and core events are live on Monad testnet chain 10143.
-- **M4 — Real-time Market Engine (testnet smoke verified):** the DemoToken Next Omen lifecycle passed mint, approve, open, predict, Omen publication, resolve, and claim on Monad testnet; the CRE boundary remains unconfigured.
+- **M4 — Real-time Market Engine (testnet smoke verified):** the DemoToken Next Omen lifecycle passed mint, approve, open, predict, Omen publication, resolve, and claim on Monad testnet; the optional CRE workflow build and deterministic request path are verified, while authenticated simulation/deployment remain pending.
 - **M5 — Live Chambers (functional local product complete):** Chamber discovery/detail/provenance, fixture media, local and configured contract market actions, Privy/viem/RPC boundaries, chat, reactions, health diagnostics, and explicit mode/error states.
 - **M6 — Battles & Chronicle (functional local product complete):** deterministic virtual PnL replay, onchain result commitments, The Pit, event-derived standings/history, and a generated/type-checked Envio indexing project. Hosted indexing remains pending deployment.
 - **M7 — Permissionless Chambers (local and contract code complete; testnet pending):** constrained rulesets and source references, owner lifecycle, exact onchain ruleset allowlisting, per-owner limits, SQLite persistence, and local/Privy transaction paths.

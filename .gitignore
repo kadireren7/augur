@@ -17,4 +17,7 @@ web/.augur/
 indexer/node_modules/
 indexer/.env
 indexer/.envio/
+cre/**/node_modules/
+cre/**/.cre_build_tmp.js
+cre/**/*.wasm
 indexer/generated/

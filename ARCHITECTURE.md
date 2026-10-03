@@ -148,7 +148,9 @@ Envio is **implemented and verified locally, but not hosted or connected to Mona
 
 ### Chainlink CRE
 
-Chainlink CRE remains **unconfigured for real execution**. `oracle/workflow.py` constructs a deterministic bounded request and requires workflow ID/version, manifest hash, Chamber, and sequence to match the response. Accepted manifests and per-Chamber sequences are replay-protected, requests time out explicitly, and the adapter never falls back after a configured transport fails. Local tests use injected transports to exercise the binding; credentials, a deployed workflow, and an SDK/runtime client remain outstanding. CRE does not make a low-quality camera source truthful.
+Chainlink CRE is an **optional verified workflow path, not a deployed path**. The real HTTP-triggered CRE SDK workflow in `cre/` accepts the bounded request produced by `oracle/workflow.py`, validates its Proof of Omen commitment, Chamber, creature, sequence context, Omen/behavior enums, ruleset metadata, Monad chain, and publisher target, then returns a deterministic decision and encoded `OmenPublisher.publish(...)` request. Removing CRE removes this optional orchestration and validation boundary; it does not remove Augur's deterministic vision/rules, oracle validation, or contract replay protection. CRE does not generate behavior or make a dishonest source truthful.
+
+The official CRE CLI v1.36.0 successfully builds the workflow for the Monad Testnet local-simulation target. Focused tests cover deterministic output, serialization, malformed and unsupported inputs, missing provenance, replay/regression context, and decoded Monad call construction. The public smoke Omen is used only as historical input because its sequence is already published. Official CRE simulation and deployment require authentication that was not present during verification, so no successful CRE run, deployment, or workflow ID is claimed. `CHAINLINK_CRE_WORKFLOW_ID` remains deployment metadata, not a switch that fabricates execution.
 
 ### Alchemy
 

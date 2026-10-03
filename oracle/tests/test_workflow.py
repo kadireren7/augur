@@ -22,12 +22,17 @@ class StubCREClient:
 
 
 class WorkflowBoundaryTests(unittest.TestCase):
+    @staticmethod
+    def bytes32(value: str) -> str:
+        normalized = value[2:] if value.startswith("0x") else value
+        return f"0x{normalized}"
+
     def manifest(self):
         source_bytes = b"cre workflow fixture"
         source = SourceSegment(
             "cre-segment",
-            "cre-chamber",
-            "cre-creature",
+            f"0x{hashlib.sha256(b'cre-chamber').hexdigest()}",
+            f"0x{hashlib.sha256(b'cre-creature').hexdigest()}",
             1_000,
             2_000,
             hashlib.sha256(source_bytes).hexdigest(),
@@ -52,15 +57,27 @@ class WorkflowBoundaryTests(unittest.TestCase):
                 "workflow_id": "augur-omen-validation-v1",
                 "workflow_version": "1.0.0",
                 "execution_id": "execution-1",
-                "manifest_hash": manifest.manifest_hash,
+                "manifest_hash": self.bytes32(manifest.manifest_hash),
                 "chamber_id": manifest.chamber_id,
+                "creature_id": manifest.creature_id,
                 "sequence": manifest.omen_sequence,
+                "provenance_hash": self.bytes32(manifest.manifest_hash),
+                "publication": {
+                    "chain_id": 10143,
+                    "to": "0x333c7ba28b6Eec62f51d111d161fc52fd3ADAa1a",
+                },
                 "accepted": True,
             }
         )
         adapter = ChainlinkCREWorkflowAdapter("augur-omen-validation-v1", client)
         self.assertTrue(adapter.validate(manifest))
-        self.assertEqual(client.request["provenance_hash"], manifest.manifest_hash)
+        self.assertEqual(client.request["provenance_hash"], self.bytes32(manifest.manifest_hash))
+        self.assertEqual(client.request["chain_id"], 10143)
+        self.assertEqual(
+            client.request["omen_publisher"],
+            "0x333c7ba28b6Eec62f51d111d161fc52fd3ADAa1a",
+        )
+        self.assertEqual(client.request["omen_value"], manifest.omen_value)
 
     def test_configured_cre_rejects_unbound_response(self) -> None:
         manifest = self.manifest()
@@ -69,9 +86,15 @@ class WorkflowBoundaryTests(unittest.TestCase):
                 "workflow_id": "augur-omen-validation-v1",
                 "workflow_version": "1.0.0",
                 "execution_id": "execution-2",
-                "manifest_hash": "0" * 64,
+                "manifest_hash": f"0x{'0' * 64}",
                 "chamber_id": manifest.chamber_id,
+                "creature_id": manifest.creature_id,
                 "sequence": manifest.omen_sequence,
+                "provenance_hash": self.bytes32(manifest.manifest_hash),
+                "publication": {
+                    "chain_id": 10143,
+                    "to": "0x333c7ba28b6Eec62f51d111d161fc52fd3ADAa1a",
+                },
                 "accepted": True,
             }
         )
@@ -86,9 +109,15 @@ class WorkflowBoundaryTests(unittest.TestCase):
                 "workflow_id": "workflow",
                 "workflow_version": "1.0.0",
                 "execution_id": "execution-1",
-                "manifest_hash": manifest.manifest_hash,
+                "manifest_hash": self.bytes32(manifest.manifest_hash),
                 "chamber_id": manifest.chamber_id,
+                "creature_id": manifest.creature_id,
                 "sequence": manifest.omen_sequence,
+                "provenance_hash": self.bytes32(manifest.manifest_hash),
+                "publication": {
+                    "chain_id": 10143,
+                    "to": "0x333c7ba28b6Eec62f51d111d161fc52fd3ADAa1a",
+                },
                 "accepted": True,
             }
         )

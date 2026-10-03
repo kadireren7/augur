@@ -1,0 +1,18 @@
+{
+  "workflow_version": "1.0.0",
+  "schema_version": "1.0.0",
+  "manifest_hash": "0x07d8fb51fa1e383343ef7636b2f15d9bc60d4564912949d48c5b0f0815149725",
+  "chamber_id": "0x9d6541b7a855bf7ca5f61517da868a754950af304a1953120ff275bdde0cfc2a",
+  "creature_id": "0x72ca1978e3c3bf77c6cc9cec54f228b8f7c05ff974ad47cec04c859b9b312bbb",
+  "sequence": 1,
+  "previous_sequence": 0,
+  "provenance_hash": "0x07d8fb51fa1e383343ef7636b2f15d9bc60d4564912949d48c5b0f0815149725",
+  "publication_state": "PENDING",
+  "omen_value": "BUY",
+  "behavior_type": "ZONE_ENTRY",
+  "observed_at": 1790954252,
+  "ruleset_version": "smoke-v1",
+  "ruleset_hash": "0x983a0a01bb32bda769709d5cdc44928d7e927fa23425dc59dfd242016efcee29",
+  "chain_id": 10143,
+  "omen_publisher": "0x333c7ba28b6Eec62f51d111d161fc52fd3ADAa1a"
+}
