@@ -1,0 +1,77 @@
+1
+00:00:00,500 --> 00:00:06,862
+Augur turns observable creature behavior into deterministic
+Omens, and onchain prediction markets.
+
+2
+00:00:08,500 --> 00:00:12,482
+The Chamber shows replay footage alongside published market
+data.
+
+3
+00:00:12,682 --> 00:00:17,942
+Deterministic observation rules map behavior to BUY, HOLD, or
+SELL.
+
+4
+00:00:18,142 --> 00:00:21,601
+Participants back the next Omen before the market locks.
+
+5
+00:00:24,500 --> 00:00:27,716
+Privy handles wallet authentication and signing.
+
+6
+00:00:27,916 --> 00:00:30,087
+Monad Testnet handles settlement.
+
+7
+00:00:30,287 --> 00:00:36,464
+Here, practice credits demonstrate position selection without
+submitting another blockchain transaction.
+
+8
+00:00:38,500 --> 00:00:42,076
+Deterministic rules, not AI, produce the signal.
+
+9
+00:00:42,276 --> 00:00:48,301
+Indexed commitments are inspectable, even where the full
+offchain provenance manifest is unavailable.
+
+10
+00:00:51,500 --> 00:00:56,051
+Envio indexes Omens, predictions, resolutions, and claims.
+
+11
+00:00:56,251 --> 00:00:58,457
+Alchemy powers Monad RPC.
+
+12
+00:00:58,657 --> 00:01:02,256
+These are actual testnet records, not mainnet trading.
+
+13
+00:01:03,500 --> 00:01:05,699
+Replay Chambers show different creatures.
+
+14
+00:01:05,899 --> 00:01:11,095
+Chainlink CRE validates publication requests in authenticated
+simulation.
+
+15
+00:01:11,295 --> 00:01:13,300
+Deployment access remains pending.
+
+16
+00:01:14,500 --> 00:01:17,159
+Physical behavior becomes a verifiable signal.
+
+17
+00:01:17,359 --> 00:01:19,065
+The signal becomes a market.
+
+18
+00:01:19,265 --> 00:01:20,322
+This is Augur.
