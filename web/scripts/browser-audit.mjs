@@ -49,7 +49,7 @@ try {
         waitUntil: "domcontentloaded",
       });
       await page
-        .locator(".page-heading, .exchange-hero")
+        .locator(".page-heading, .creature-wall")
         .first()
         .waitFor({ state: "visible" });
       await page.waitForTimeout(900);
@@ -64,6 +64,20 @@ try {
       if (response.status() !== 200)
         throw new Error(`Route ${route} HTTP ${response.status()}`);
       const body = await page.locator("body").innerText();
+      const smallText = await page.evaluate(() =>
+        [...document.querySelectorAll("main *, header *, footer *")]
+          .filter((element) =>
+            !element.closest("script, style, .sr-only") &&
+            element.getClientRects().length > 0 &&
+            [...element.childNodes].some((node) =>
+              node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
+            ),
+          )
+          .filter((element) => Number.parseFloat(getComputedStyle(element).fontSize) < 13)
+          .map((element) => ({ tag: element.tagName, size: getComputedStyle(element).fontSize })),
+      );
+      if (smallText.length)
+        throw new Error(`Product text below 13px on ${route} at ${width}: ${JSON.stringify(smallText)}`);
       if (
         route === chamber &&
         (!body.includes("INDEXED") ||
@@ -89,6 +103,7 @@ try {
       if (route.startsWith("/replays/")) {
         await page.waitForFunction(
           () => document.querySelector("video")?.readyState >= 2,
+          null,
           { timeout: 12000 },
         );
       }
@@ -146,7 +161,7 @@ try {
   });
   const page = await context.newPage();
   await page.goto(base + "/");
-  await page.locator(".exchange-hero").waitFor();
+  await page.locator(".creature-wall").waitFor();
   await page.waitForTimeout(1000);
   await page
     .locator("video")
@@ -159,14 +174,12 @@ try {
   await page.locator(".discovery-section").scrollIntoViewIfNeeded();
   await page.waitForTimeout(700);
   await page
-    .locator(".discovery-section")
+    .locator(".creature-wall")
     .screenshot({ path: resolve(output, "discovery.png") });
-  await page.getByRole("button", { name: "Fish", exact: true }).click();
-  if (
-    (await page.locator(".creature-discovery").count()) !== 1 ||
-    !(await page.getByRole("link", { name: "Open Chamber" }).isVisible())
-  )
-    throw new Error("Creature category filtering failed");
+  if ((await page.locator(".wall-chamber-link").count()) !== 3)
+    throw new Error("Three-creature wall links missing");
+  await page.getByRole("link", { name: "Enter Bubbles’s Chamber", exact: true }).click();
+  await page.getByRole("heading", { name: "Bubbles", exact: true }).waitFor();
   await page.getByRole("link", { name: "Chronicle", exact: true }).click();
   await page.locator(".ledger-event").first().waitFor();
   await page.goto(base + chamber);
@@ -184,6 +197,25 @@ try {
   await page.getByRole("button", { name: "How payouts work" }).click();
   if (!(await page.getByText("0% platform fee.", { exact: false }).isVisible()))
     throw new Error("Payout drawer failed");
+  await page.getByRole("button", { name: "Pause replay", exact: true }).click();
+  if (!(await page.locator("video").evaluate((element) => element.paused)))
+    throw new Error("Custom replay pause failed");
+  const timeline = page.getByRole("slider", { name: "Replay timeline" });
+  await timeline.focus();
+  await timeline.press("Home");
+  for (let step = 0; step < 10; step++) await timeline.press("ArrowRight");
+  await page.waitForFunction(() => {
+    const element = document.querySelector("video");
+    return element && !element.seeking;
+  });
+  const seekTime = await page.locator("video").evaluate((element) => element.currentTime);
+  if (seekTime < 0.9 || seekTime > 1.2)
+    throw new Error(`Custom replay timeline did not seek: ${seekTime}`);
+  await page.getByRole("button", { name: "Sound off", exact: true }).click();
+  if (await page.locator("video").evaluate((element) => element.muted))
+    throw new Error("Custom mute control failed");
+  await page.getByRole("button", { name: "Sound on", exact: true }).click();
+  await page.getByRole("button", { name: "Play replay", exact: true }).click();
   await page.getByRole("button", { name: "Fullscreen ↗" }).click();
   await page.waitForTimeout(300);
   const fullscreen = await page.evaluate(() =>
@@ -207,6 +239,9 @@ try {
   const loginDialog = await page.getByRole("dialog").count();
   if (loginDialog)
     await page.screenshot({ path: resolve(output, "wallet-login.png") });
+  // Local Showcase cycles create test records; keep presentation checks read-only.
+  let showcaseResult = "NOT RUN (read-only)";
+  if (process.env.AUGUR_AUDIT_SHOWCASE_CYCLES === "1") {
   await page.goto(base + "/showcase");
   await page.waitForTimeout(900);
   const frameDirectory = resolve(
@@ -226,6 +261,8 @@ try {
   await page.getByRole("button", { name: "Stop cycles" }).click();
   if (!(await page.getByText("Cycles paused").isVisible()))
     throw new Error("Showcase stop failed");
+  showcaseResult = "PASS";
+  }
   await context.close();
   const reduced = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -236,7 +273,7 @@ try {
   await reducedPage.waitForTimeout(800);
   if (
     !(await reducedPage
-      .getByRole("heading", { name: /The next move\.\s*Your position\./ })
+      .getByRole("link", { name: "Enter Pablo’s Chamber", exact: true })
       .isVisible())
   )
     throw new Error("Reduced-motion home inaccessible");
@@ -264,8 +301,10 @@ try {
         ),
         transactionSubmitted: false,
         reducedMotion: "PASS",
-        showcase: "PASS",
+        showcase: showcaseResult,
         videoErrorState: "PASS",
+        typographyMinimum: "13px PASS",
+        customReplayControls: "PASS",
         fullscreen,
         privyLoginDialog: loginDialog > 0,
         authenticatedVerification: "MANUAL",

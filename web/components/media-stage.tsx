@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useReducedMotion } from "motion/react";
 import { StateReveal } from "@/components/motion-system";
 import { mediaLabel, type MediaSource } from "@/lib/media";
 import type { OmenView } from "@/lib/types";
+import { mediaComposition } from "@/lib/media-presentation";
+import { streamRetryDelay } from "@/lib/media-playback";
 
 export function MediaStage({
   source,
@@ -13,6 +15,7 @@ export function MediaStage({
   behavior,
   compact = false,
   ambient = false,
+  wall = false,
 }: {
   source: MediaSource;
   name: string;
@@ -20,6 +23,7 @@ export function MediaStage({
   behavior?: string;
   compact?: boolean;
   ambient?: boolean;
+  wall?: boolean;
 }) {
   const reduced = useReducedMotion();
   const video = useRef<HTMLVideoElement>(null);
@@ -28,13 +32,45 @@ export function MediaStage({
   const [error, setError] = useState("");
   const [time, setTime] = useState(0);
   const [muted, setMuted] = useState(true);
+  const [paused, setPaused] = useState(true);
+  const [duration, setDuration] = useState(0);
   const [zones, setZones] = useState(false);
   const [cameraStarted, setCameraStarted] = useState(false);
   const [cameraBusy, setCameraBusy] = useState(false);
   const [reload, setReload] = useState(0);
   const [playingSource, setPlayingSource] = useState("");
   const [liveSource, setLiveSource] = useState("");
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const sourceKey = `${source.id}:${source.sourceUrl ?? "camera"}`;
+  const composition = mediaComposition(name);
+  useEffect(() => {
+    const element = video.current;
+    if (!element || reduced || (compact && !ambient && !wall) ||
+      source.sourceType === "browser_camera" || source.status !== "available") return;
+    const start = () => {
+      if (element.paused) void element.play().catch(() => setAutoplayBlocked(true));
+    };
+    // play() loads a metadata-preloaded replay; waiting for canplay can deadlock
+    // when the browser has not yet requested the first decoded frame.
+    if (source.sourceType === "recorded_video" || element.readyState >= 2) start();
+    else element.addEventListener("canplay", start, { once: true });
+    return () => element.removeEventListener("canplay", start);
+  }, [sourceKey, source.sourceType, source.status, reduced, compact, ambient, wall, reload]);
+  useEffect(() => {
+    // Cached media can load before hydration; derive controls from the element.
+    const frame = requestAnimationFrame(() => {
+      const element = video.current;
+      if (!element || element.readyState < 1) return;
+      setDuration(Number.isFinite(element.duration) ? element.duration : 0);
+      setTime(element.currentTime);
+      setPaused(element.paused);
+      if (element.readyState >= 2) {
+        setStatus(element.paused ? "READY" : "PLAYING");
+        if (!element.paused) setPlayingSource(sourceKey);
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [sourceKey]);
   useEffect(() => {
     if (
       (compact && !ambient) ||
@@ -75,9 +111,29 @@ export function MediaStage({
       return;
     let cleanup = () => {};
     let disposed = false;
-    if (element.canPlayType("application/vnd.apple.mpegurl"))
+    if (element.canPlayType("application/vnd.apple.mpegurl")) {
       element.src = source.sourceUrl;
-    else
+      let attempts = 0;
+      let retry: ReturnType<typeof setTimeout> | undefined;
+      const recover = () => {
+        clearTimeout(retry);
+        attempts = Math.min(attempts + 1, 6);
+        setLiveSource("");
+        setStatus(attempts > 3 ? "OFFLINE" : "RECONNECTING");
+        if (attempts > 3) setError("Stream offline. Reconnecting automatically…");
+        retry = setTimeout(() => element.load(), streamRetryDelay(attempts));
+      };
+      const resumed = () => { attempts = 0; clearTimeout(retry); };
+      element.addEventListener("error", recover);
+      element.addEventListener("playing", resumed);
+      window.addEventListener("online", recover);
+      cleanup = () => {
+        clearTimeout(retry);
+        element.removeEventListener("error", recover);
+        element.removeEventListener("playing", resumed);
+        window.removeEventListener("online", recover);
+      };
+    } else
       void import("hls.js")
         .then(({ default: Hls }) => {
           if (disposed) return;
@@ -92,6 +148,8 @@ export function MediaStage({
           hls.attachMedia(element);
           hls.on(Hls.Events.LEVEL_LOADED, (_event, data) => {
             if (data.details.live) {
+              retries = 0;
+              clearTimeout(retry);
               setLiveSource(`${source.id}:${source.sourceUrl}`);
               setError("");
             } else
@@ -101,18 +159,22 @@ export function MediaStage({
           });
           hls.on(Hls.Events.ERROR, (_event, data) => {
             if (!data.fatal) return;
-            if (retries++ < 1) {
-              setStatus("RECONNECTING");
-              retry = setTimeout(() => {
-                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-                else if (data.type === Hls.ErrorTypes.MEDIA_ERROR)
-                  hls.recoverMediaError();
-                else setError("Stream offline. Try reconnecting.");
-              }, 1000);
-            } else setError("Stream offline. Try reconnecting.");
+            clearTimeout(retry);
+            setLiveSource("");
+            retries = Math.min(retries + 1, 6);
+            setStatus(retries > 3 ? "OFFLINE" : "RECONNECTING");
+            if (retries > 3) setError("Stream offline. Reconnecting automatically…");
+            retry = setTimeout(() => {
+              if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+              else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+              else setError("Stream unavailable. Reload the source.");
+            }, streamRetryDelay(retries));
           });
+          const online = () => hls.startLoad();
+          window.addEventListener("online", online);
           cleanup = () => {
             clearTimeout(retry);
+            window.removeEventListener("online", online);
             hls.destroy();
           };
         })
@@ -121,7 +183,7 @@ export function MediaStage({
       disposed = true;
       cleanup();
     };
-  }, [source, reload]);
+  }, [source.id, source.sourceType, source.sourceUrl, source.status, reload]);
   useEffect(() => {
     const element = video.current;
     return () => {
@@ -173,7 +235,18 @@ export function MediaStage({
   const live =
     source.sourceType === "live_hls" || source.sourceType === "browser_camera";
   return (
-    <div className={`media-stage ${compact ? "compact" : ""}`} ref={stage}>
+    <div
+      className={`media-stage ${compact ? "compact" : ""} ${wall ? "wall-player" : ""}`}
+      ref={stage}
+      style={{
+        "--media-fit": composition.fit,
+        "--media-position": composition.position,
+        "--media-hero-position": composition.heroPosition,
+        "--media-wall-position": composition.wallPosition,
+      } as CSSProperties}
+      aria-label={`${name} viewing player`}
+    >
+      <div className="media-screen">
       {source.sourceType !== "fixture" ? (
         <video
           ref={video}
@@ -181,7 +254,7 @@ export function MediaStage({
           playsInline
           muted={muted}
           loop={!live}
-          controls={!compact && !live}
+          controls={false}
           preload={compact && !ambient ? "none" : "metadata"}
           poster={source.poster ?? undefined}
           src={
@@ -190,7 +263,25 @@ export function MediaStage({
               ? (source.sourceUrl ?? undefined)
               : undefined
           }
+          onLoadStart={() => {
+            setStatus("LOADING");
+            setTime(0);
+            setDuration(0);
+            setPaused(true);
+          }}
           onLoadedData={() => setStatus("READY")}
+          onLoadedMetadata={() => {
+            const value = video.current?.duration ?? 0;
+            setDuration(Number.isFinite(value) ? value : 0);
+          }}
+          onCanPlay={() => {
+            const element = video.current;
+            if (!element || source.sourceType !== "recorded_video") return;
+            setPaused(element.paused);
+            setStatus(element.paused ? "READY" : "PLAYING");
+            setError("");
+            if (!element.paused) setPlayingSource(sourceKey);
+          }}
           onDurationChange={() => {
             if (
               source.sourceType === "live_hls" &&
@@ -199,15 +290,18 @@ export function MediaStage({
               setLiveSource(sourceKey);
           }}
           onPlaying={() => {
+            setAutoplayBlocked(false);
+            setPaused(false);
             setStatus("PLAYING");
             setPlayingSource(sourceKey);
-            if (source.sourceType !== "live_hls") setError("");
+            if (source.sourceType !== "live_hls" || liveSource === sourceKey || video.current?.duration === Infinity) setError("");
             if (
               source.sourceType === "browser_camera" &&
               video.current?.srcObject
             )
               setLiveSource(sourceKey);
           }}
+          onPause={() => setPaused(true)}
           onWaiting={() => live && setStatus("RECONNECTING")}
           onMouseEnter={() => {
             if (compact && !reduced) void video.current?.play().catch(() => {});
@@ -217,7 +311,7 @@ export function MediaStage({
           }}
           onTimeUpdate={() => setTime(video.current?.currentTime ?? 0)}
           onError={() =>
-            setError("Video unavailable. Indexed market data is unaffected.")
+            setError(live ? "Stream offline. Reconnecting automatically…" : "Video unavailable. Indexed market data is unaffected.")
           }
         />
       ) : (
@@ -251,23 +345,17 @@ export function MediaStage({
           {String(Math.floor(time % 60)).padStart(2, "0")}
         </span>
       </div>
-      {!compact && (
+      {!compact && !wall && (
         <div className="media-caption">
           <div>
             <span className="eyebrow">{behavior ?? "Observation feed"}</span>
-            <h2>{name}</h2>
-            <p>
-              {source.evidence === "illustrative"
-                ? "Reference footage · not publication evidence"
-                : "Configured source · not independently attested"}
-            </p>
           </div>
           {omen && (
             <StateReveal
               identity={omen.sequence}
               className={`media-omen ${omen.value.toLowerCase()}`}
             >
-              <span>OMEN #{omen.sequence}</span>
+              <span>Omen #{omen.sequence}</span>
               <strong>{omen.value}</strong>
             </StateReveal>
           )}
@@ -285,7 +373,6 @@ export function MediaStage({
       )}
       {["LOADING", "RECONNECTING"].includes(status) &&
         source.status === "available" &&
-        source.sourceType === "recorded_video" &&
         !compact &&
         !error && (
           <span className="media-loading" role="status">
@@ -309,10 +396,50 @@ export function MediaStage({
           >
             Reload source
           </button>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
       {!compact && (
+        <>
         <div className="media-tools">
+          {source.sourceType === "recorded_video" && (
+            <>
+              <button
+                className="playback-button"
+                aria-label={paused ? "Play replay" : "Pause replay"}
+                disabled={Boolean(error) || source.status !== "available"}
+                onClick={() => {
+                  const element = video.current;
+                  if (!element) return;
+                  if (element.paused)
+                    void element.play().catch(() => setError("Playback unavailable. Try reloading the source."));
+                  else element.pause();
+                }}
+                type="button"
+              >
+                <span aria-hidden="true">{paused ? "▶" : "Ⅱ"}</span>
+              </button>
+              {!wall && <label className="replay-timeline">
+                <span className="sr-only">Replay timeline</span>
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 1}
+                  step="0.1"
+                  value={Math.min(time, duration || 1)}
+                  style={{ "--played": `${duration ? (time / duration) * 100 : 0}%` } as CSSProperties}
+                  disabled={!duration || Boolean(error)}
+                  aria-label="Replay timeline"
+                  aria-valuetext={`${Math.floor(time)} of ${Math.floor(duration)} seconds`}
+                  onChange={(event) => {
+                    const nextTime = Number(event.target.value);
+                    setTime(nextTime);
+                    if (video.current) video.current.currentTime = nextTime;
+                  }}
+                />
+              </label>}
+            </>
+          )}
           {source.sourceType === "browser_camera" && !cameraStarted && (
             <button
               disabled={source.status !== "available" || cameraBusy}
@@ -329,13 +456,13 @@ export function MediaStage({
           >
             {muted ? "Sound off" : "Sound on"}
           </button>
-          <button
+          {!wall && <button
             aria-pressed={zones}
             onClick={() => setZones(!zones)}
             type="button"
           >
             Reference zones
-          </button>
+          </button>}
           <button
             onClick={() =>
               void stage.current
@@ -348,10 +475,19 @@ export function MediaStage({
           >
             Fullscreen ↗
           </button>
-          <a href="/media/CREDITS.md" className="media-credit">
-            {source.attribution}
-          </a>
         </div>
+        {autoplayBlocked && !error && (
+          <button className="autoplay-affordance" type="button" onClick={() =>
+            void video.current?.play().catch(() => setError("Playback unavailable. Reload the source."))
+          }>Play {source.sourceType === "recorded_video" ? "replay" : "stream"} ▶</button>
+        )}
+        {!wall && <div className="media-footnote">
+          <span>{source.evidence === "illustrative"
+            ? "Reference footage · not publication evidence"
+            : "Configured source · not independently attested"}</span>
+          <a href="/media/CREDITS.md" className="media-credit">{source.attribution}</a>
+        </div>}
+        </>
       )}
     </div>
   );

@@ -88,11 +88,11 @@ export const creatureMedia: Record<
       chamberId: "replay-pablo",
       creatureId: "pablo",
       sourceType: "recorded_video",
-      sourceUrl: "/media/hamster.webm",
+      sourceUrl: "/media/hamster.mp4",
       poster: "/media/hamster.jpg",
       status: "available",
       evidence: "illustrative",
-      attribution: "Greg Heartsfield · CC BY 2.0",
+      attribution: "Pixabay via Pexels · Pexels license",
     },
   },
   Fish: {
@@ -105,11 +105,11 @@ export const creatureMedia: Record<
       chamberId: "replay-bubbles",
       creatureId: "bubbles",
       sourceType: "recorded_video",
-      sourceUrl: "/media/fish.webm",
-      poster: "/media/fish.jpg",
+      sourceUrl: "/media/goldfish.mp4",
+      poster: "/media/goldfish.jpg",
       status: "available",
       evidence: "illustrative",
-      attribution: "Horcrux92 · CC BY-SA 4.0",
+      attribution: "Ammad Rasool via Pexels · Pexels license",
     },
   },
   Turtle: {
@@ -122,11 +122,11 @@ export const creatureMedia: Record<
       chamberId: "replay-turbo",
       creatureId: "turbo",
       sourceType: "recorded_video",
-      sourceUrl: "/media/tortoise.webm",
-      poster: "/media/tortoise.jpg",
+      sourceUrl: "/media/land-tortoise.mp4",
+      poster: "/media/land-tortoise.jpg",
       status: "available",
       evidence: "illustrative",
-      attribution: "Kasyap · CC0 1.0 · land tortoises",
+      attribution: "Mikhail Nilov via Pexels · Pexels license",
     },
   },
 };
@@ -135,4 +135,27 @@ export function mediaLabel(source: MediaSource): string {
   if (source.sourceType === "fixture") return "SIMULATION";
   if (source.sourceType === "recorded_video") return "REPLAY";
   return "LIVE SOURCE";
+}
+
+/** Public playback configuration only. Never substitutes a replay for a bad live URL. */
+export function publicStreamSource(base: MediaSource, playbackUrl?: string): MediaSource {
+  if (!playbackUrl?.trim()) return base;
+  const valid = safeMediaUrl(playbackUrl) && playbackUrl.startsWith("https://");
+  return {
+    ...base, id: `${base.id}-live`, sourceType: "live_hls",
+    sourceUrl: valid ? playbackUrl : null,
+    status: valid ? "available" : "unavailable",
+    evidence: "source_record", attribution: "Configured public stream · not independently attested",
+  };
+}
+
+export function creaturePlayback(species: Species, configured?: MediaSource): MediaSource {
+  const base = creatureMedia[species].media;
+  if (configured && configured.id !== base.id) return configured;
+  const urls = {
+    Hamster: process.env.NEXT_PUBLIC_PABLO_LIVE_HLS_URL,
+    Fish: process.env.NEXT_PUBLIC_BUBBLES_LIVE_HLS_URL,
+    Turtle: process.env.NEXT_PUBLIC_TURBO_LIVE_HLS_URL,
+  };
+  return publicStreamSource(configured ?? base, urls[species]);
 }

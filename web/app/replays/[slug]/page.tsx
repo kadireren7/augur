@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MediaStage } from "@/components/media-stage";
+import { PracticeExchange } from "@/components/practice-exchange";
+import type { PracticeCreature } from "@/lib/practice-exchange";
 import { SocialPanel } from "@/components/social-panel";
 import { ChamberFavorite } from "@/components/chamber-favorite";
-import { creatureMedia } from "@/lib/media";
+import { creatureMedia, creaturePlayback } from "@/lib/media";
 import { creatureIdentity } from "@/lib/creature-identity";
 import { getStore } from "@/lib/store";
 import { configuredLiveMedia } from "@/lib/live-media";
@@ -46,7 +48,7 @@ export default async function ReplayPage({
       <div className="chamber-layout">
         <div className="main-column">
           <MediaStage
-            source={media}
+            source={creaturePlayback(species as keyof typeof creatureIdentity, media)}
             name={identity.name}
             behavior={identity.behavior}
           />
@@ -61,25 +63,13 @@ export default async function ReplayPage({
         </div>
         <aside className="market-rail">
           <section className="panel">
-            <h2>Next Omen market</h2>
+            <h2>Play the next Omen</h2>
             <p className="muted">
-              No funded contract market is registered for this viewing room.
+              Choose BUY, HOLD or SELL in the practice exchange below. Start with 1,000 demo credits; no wallet required.
             </p>
-            <div className="outcome-grid">
-              {["BUY", "HOLD", "SELL"].map((v) => (
-                <button
-                  className={`outcome-button ${v.toLowerCase()}`}
-                  disabled
-                  key={v}
-                >
-                  <strong>{v}</strong>
-                  <span>No pool</span>
-                </button>
-              ))}
-            </div>
+            <a href="#practice" className="button">Take a demo position ↓</a>
             <p>
-              Positions open after authorized registration and an onchain market
-              opening.
+              Demo credits have no cash value. This viewing room has no funded onchain market.
             </p>
             <Link className="button" href="/chambers/indexed-9d6541b7a855bf7c">
               View Pablo’s market →
@@ -96,6 +86,7 @@ export default async function ReplayPage({
         </aside>
       </div>
       <div className="chamber-below">
+        <PracticeExchange initialCreature={slug as PracticeCreature}/>
         <section className="panel">
           <h2>Signal history</h2>
           <p className="muted">No onchain publications yet.</p>

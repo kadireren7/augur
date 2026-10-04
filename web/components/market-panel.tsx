@@ -488,6 +488,11 @@ export function MarketPanel({
           Log in to take a position
         </button>
       )}
+      {contractMode && (
+        <p className="stake-permission">
+          If your stake needs permission, approve AUGD first. Predict places your position; approval alone does not.
+        </p>
+      )}
       <div className="button-row">
         <button
           className="button secondary"
@@ -544,12 +549,17 @@ export function MarketPanel({
         )}
       </div>
       {contractMode && approvalPreflight.status !== "IDLE" && (
-        <p
+        <div
           className={approvalPreflight.status === "FAILED" ? "error" : "notice"}
           role="status"
         >
-          {approvalPreflight.message}
-        </p>
+          {approvalPreflight.status === "FAILED" ? approvalPreflight.message : (
+            <>
+              {approvalPreflight.status === "READY" ? "Your stake is ready for approval." : "Checking stake approval…"}
+              <details className="approval-details"><summary>Approval details</summary>{approvalPreflight.message}</details>
+            </>
+          )}
+        </div>
       )}
       {position && (
         <p className="muted">

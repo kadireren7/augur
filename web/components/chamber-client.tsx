@@ -8,7 +8,7 @@ import { SocialPanel } from "@/components/social-panel";
 import { ChamberFavorite } from "@/components/chamber-favorite";
 import { MediaStage } from "@/components/media-stage";
 import { StateReveal } from "@/components/motion-system";
-import { creatureMedia, type MediaSource } from "@/lib/media";
+import { creatureMedia, creaturePlayback, type MediaSource } from "@/lib/media";
 import { creatureIdentity } from "@/lib/creature-identity";
 import { behaviorLabel } from "@/lib/behavior-label";
 import type { ChamberView } from "@/lib/types";
@@ -101,7 +101,7 @@ export function ChamberClient({
       <div className="chamber-layout">
         <div className="main-column">
           <MediaStage
-            source={viewingMedia}
+            source={creaturePlayback(chamber.creature.species, viewingMedia)}
             name={name}
             omen={chamber.latestOmen}
             behavior={behavior}
